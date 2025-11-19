@@ -3,6 +3,10 @@ node_modules/
 */node_modules/
 **/node_modules/
 
+# Cloned project repositories (they have their own .git)
+packages/*/*/
+!packages/*/README.md
+
 # Build outputs
 dist/
 build/

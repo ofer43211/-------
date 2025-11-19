@@ -2,6 +2,13 @@
 
 This is a consolidated monorepo containing all AI and infrastructure projects.
 
+## ⚡ Status
+
+**Currently Cloned**: 10 public repositories
+**Pending**: 13 private repositories (require authentication)
+
+See [docs/PRIVATE_REPOS.md](docs/PRIVATE_REPOS.md) for how to add private repositories.
+
 ## 📁 Structure
 
 ```
@@ -156,12 +163,17 @@ See individual project licenses in their respective directories.
 
 ## 🎯 Project Status
 
-Total Projects: 23
-- RoTEM: 7 projects
-- Gemini: 3 projects
-- AI Platforms: 6 projects
-- Tools: 3 projects
-- Infrastructure: 4 projects
+**Total Projects**: 23 (10 cloned, 13 pending authentication)
+
+### ✅ Cloned (Public Repositories)
+- RoTEM: 1/7 projects (rotem-ai-demo)
+- Gemini: 1/3 projects (gemini-cli)
+- AI Platforms: 2/6 projects (ai-saas-platform1, premium-business-platform)
+- Tools: 3/3 projects (all cloned ✓)
+- Infrastructure: 3/4 projects (tailscale, firebaseui-web, echosync-v6)
+
+### 🔒 Pending (Private Repositories)
+13 projects require GitHub authentication. See [docs/PRIVATE_REPOS.md](docs/PRIVATE_REPOS.md) for instructions.
 
 ---
 
