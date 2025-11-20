@@ -132,6 +132,9 @@ Core infrastructure and services:
 # Re-consolidate all projects (pull latest changes)
 npm run consolidate
 
+# Check which projects are present locally
+npm run status
+
 # Clean all node_modules
 npm run clean
 

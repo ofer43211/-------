@@ -13,6 +13,7 @@
   "scripts": {
     "consolidate": "node tools/consolidate-projects.js",
     "bootstrap": "npm install && npm run consolidate",
+    "status": "node tools/check-projects.js",
     "test:all": "npm run test --workspaces",
     "build:all": "npm run build --workspaces",
     "clean": "rm -rf node_modules packages/*/node_modules"
