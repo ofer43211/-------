@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  tailscale-exit-node:
+    image: tailscale/tailscale:latest
+    hostname: ${TS_HOSTNAME:-exit-node}
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_HOSTNAME=${TS_HOSTNAME:-exit-node}
+      - TS_EXTRA_ARGS=--advertise-exit-node --advertise-exit-node-allow-lan-access
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    network_mode: host
+
+volumes:
+  tailscale-state:
