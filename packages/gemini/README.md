@@ -2,9 +2,9 @@
 
 This directory contains the following projects:
 
-- **GeminiBiju_Unified**: https://github.com/ReachingOut/GeminiBiju_Unified.git
-- **gemini-cli**: https://github.com/ofer43211/gemini-cli.git
-- **gemini-biju**: https://github.com/ofer43211/gemini-biju.git
+- **GeminiBiju_Unified**: https://github.com/ReachingOut/GeminiBiju_Unified
+- **gemini-cli**: https://github.com/ofer43211/gemini-cli
+- **gemini-biju**: https://github.com/ofer43211/gemini-biju
 
 ## Structure
 
