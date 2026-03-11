@@ -6,6 +6,7 @@ node_modules/
 # Cloned project repositories (they have their own .git)
 packages/*/*/
 !packages/*/README.md
+!packages/infrastructure/tailscale-exit-nodes/
 
 # Build outputs
 dist/

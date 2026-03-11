@@ -2,9 +2,9 @@
 
 This directory contains the following projects:
 
-- **claude-code**: https://github.com/ofer43211/claude-code.git
-- **anthropic-sdk-python**: https://github.com/ofer43211/anthropic-sdk-python.git
-- **github-mcp-server**: https://github.com/ofer43211/github-mcp-server.git
+- **claude-code**: https://github.com/ofer43211/claude-code
+- **anthropic-sdk-python**: https://github.com/ofer43211/anthropic-sdk-python
+- **github-mcp-server**: https://github.com/ofer43211/github-mcp-server
 
 ## Structure
 
