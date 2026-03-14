@@ -16,6 +16,7 @@
     "status": "node tools/check-projects.js",
     "test:all": "npm run test --workspaces",
     "build:all": "npm run build --workspaces",
+    "docs:generate": "node tools/generate-docs.js",
     "clean": "rm -rf node_modules packages/*/node_modules"
   },
   "devDependencies": {

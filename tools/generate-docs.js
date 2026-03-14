@@ -1,0 +1,179 @@
+#!/usr/bin/env node
+
+/**
+ * Cross-Project Documentation Generator
+ *
+ * Scans all sub-projects and generates a unified documentation file
+ * (docs/PROJECT_CATALOG.md) with each project's description, available
+ * scripts, key dependencies, and local availability status.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const PACKAGES_DIR = path.join(__dirname, '..', 'packages');
+const OUTPUT_FILE = path.join(__dirname, '..', 'docs', 'PROJECT_CATALOG.md');
+
+const CATEGORIES = {
+  rotem: {
+    label: 'RoTEM AI System',
+    projects: [
+      'rotem-group-chat',
+      'rotem-ai-demo',
+      'RoTEM_Project',
+      'rotem_system',
+      'RoTEM_Dashboard',
+      'rotem_brain',
+      'RoTEM',
+    ],
+  },
+  gemini: {
+    label: 'Gemini / Biju',
+    projects: ['GeminiBiju_Unified', 'gemini-cli', 'gemini-biju'],
+  },
+  'ai-platforms': {
+    label: 'AI Platforms',
+    projects: [
+      'ai-saas-platform1',
+      'btl-gpt-production-suite',
+      'AI-Empire',
+      'AIPROJ',
+      'UltimateAgentConsole',
+      'premium-business-platform',
+    ],
+  },
+  tools: {
+    label: 'Development Tools',
+    projects: ['claude-code', 'anthropic-sdk-python', 'github-mcp-server'],
+  },
+  infrastructure: {
+    label: 'Infrastructure',
+    projects: ['tailscale', 'firebaseui-web', 'TheVortex_v4', 'echosync-v6'],
+  },
+};
+
+function readPackageJson(projectDir) {
+  const pkgPath = path.join(projectDir, 'package.json');
+  if (!fs.existsSync(pkgPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function hasReadme(projectDir) {
+  return fs.existsSync(path.join(projectDir, 'README.md'));
+}
+
+function detectLanguages(projectDir) {
+  const indicators = [
+    { file: 'package.json', lang: 'JavaScript/Node.js' },
+    { file: 'tsconfig.json', lang: 'TypeScript' },
+    { file: 'requirements.txt', lang: 'Python' },
+    { file: 'setup.py', lang: 'Python' },
+    { file: 'pyproject.toml', lang: 'Python' },
+    { file: 'go.mod', lang: 'Go' },
+    { file: 'Cargo.toml', lang: 'Rust' },
+  ];
+  const langs = [];
+  for (const { file, lang } of indicators) {
+    if (fs.existsSync(path.join(projectDir, file)) && !langs.includes(lang)) {
+      langs.push(lang);
+    }
+  }
+  return langs;
+}
+
+function getProjectInfo(category, projectName) {
+  const projectDir = path.join(PACKAGES_DIR, category, projectName);
+  const exists = fs.existsSync(projectDir);
+
+  if (!exists) {
+    return { name: projectName, exists: false };
+  }
+
+  const pkg = readPackageJson(projectDir);
+  const langs = detectLanguages(projectDir);
+
+  return {
+    name: projectName,
+    exists: true,
+    description: pkg?.description || null,
+    version: pkg?.version || null,
+    scripts: pkg?.scripts ? Object.keys(pkg.scripts) : [],
+    dependencies: pkg?.dependencies ? Object.keys(pkg.dependencies) : [],
+    devDependencies: pkg?.devDependencies ? Object.keys(pkg.devDependencies) : [],
+    languages: langs,
+    hasReadme: hasReadme(projectDir),
+  };
+}
+
+function formatProjectSection(info, category) {
+  const relativePath = `packages/${category}/${info.name}`;
+
+  if (!info.exists) {
+    return `### ${info.name}\n\n> **Not cloned** — requires GitHub authentication. See [PRIVATE_REPOS.md](PRIVATE_REPOS.md).\n`;
+  }
+
+  const lines = [`### ${info.name}\n`];
+
+  lines.push(`- **Path**: \`${relativePath}\``);
+  if (info.description) lines.push(`- **Description**: ${info.description}`);
+  if (info.version) lines.push(`- **Version**: ${info.version}`);
+  if (info.languages.length) lines.push(`- **Languages**: ${info.languages.join(', ')}`);
+  if (info.hasReadme) lines.push(`- **README**: [${info.name}/README.md](../${relativePath}/README.md)`);
+
+  if (info.scripts.length) {
+    lines.push(`- **Scripts**: \`${info.scripts.join('`, `')}\``);
+  }
+
+  if (info.dependencies.length) {
+    const top = info.dependencies.slice(0, 8);
+    const suffix = info.dependencies.length > 8 ? ` (+${info.dependencies.length - 8} more)` : '';
+    lines.push(`- **Key dependencies**: ${top.join(', ')}${suffix}`);
+  }
+
+  lines.push('');
+  return lines.join('\n');
+}
+
+function generate() {
+  const timestamp = new Date().toISOString().split('T')[0];
+  const sections = [];
+  let totalProjects = 0;
+  let clonedProjects = 0;
+
+  for (const [category, { label, projects }] of Object.entries(CATEGORIES)) {
+    const projectInfos = projects.map((p) => getProjectInfo(category, p));
+    totalProjects += projectInfos.length;
+    clonedProjects += projectInfos.filter((p) => p.exists).length;
+
+    const clonedInCategory = projectInfos.filter((p) => p.exists).length;
+    sections.push(`## ${label} (${clonedInCategory}/${projectInfos.length} available)\n`);
+    for (const info of projectInfos) {
+      sections.push(formatProjectSection(info, category));
+    }
+  }
+
+  const output = `# Project Catalog
+
+> Auto-generated by \`tools/generate-docs.js\` on ${timestamp}.
+> Run \`npm run docs:generate\` to regenerate.
+
+**${clonedProjects}/${totalProjects}** projects available locally.
+
+---
+
+${sections.join('\n')}
+---
+
+*Generated on ${timestamp}*
+`;
+
+  fs.writeFileSync(OUTPUT_FILE, output);
+  console.log(`✅ Generated ${OUTPUT_FILE}`);
+  console.log(`   ${clonedProjects}/${totalProjects} projects documented.`);
+}
+
+generate();
