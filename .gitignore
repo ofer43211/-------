@@ -6,6 +6,8 @@ node_modules/
 # Cloned project repositories (they have their own .git)
 packages/*/*/
 !packages/*/README.md
+# Shared packages are committed (not cloned repos)
+!packages/shared/*/
 
 # Build outputs
 dist/
