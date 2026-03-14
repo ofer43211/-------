@@ -1,0 +1,136 @@
+version: 2
+
+updates:
+  # Root monorepo dependencies (Turbo, Lerna)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+    groups:
+      dev-tools:
+        patterns:
+          - "turbo"
+          - "lerna"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "ci"
+      - "dependencies"
+
+  # RoTEM projects
+  - package-ecosystem: "npm"
+    directory: "/packages/rotem/rotem-ai-demo"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(rotem)"
+    labels:
+      - "dependencies"
+      - "rotem"
+
+  # Gemini projects
+  - package-ecosystem: "npm"
+    directory: "/packages/gemini/gemini-cli"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(gemini)"
+    labels:
+      - "dependencies"
+      - "gemini"
+
+  # AI Platforms
+  - package-ecosystem: "npm"
+    directory: "/packages/ai-platforms/ai-saas-platform1"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(ai-platforms)"
+    labels:
+      - "dependencies"
+      - "ai-platforms"
+
+  - package-ecosystem: "npm"
+    directory: "/packages/ai-platforms/premium-business-platform"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(ai-platforms)"
+    labels:
+      - "dependencies"
+      - "ai-platforms"
+
+  # Tools
+  - package-ecosystem: "npm"
+    directory: "/packages/tools/claude-code"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(tools)"
+    labels:
+      - "dependencies"
+      - "tools"
+
+  - package-ecosystem: "npm"
+    directory: "/packages/tools/github-mcp-server"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(tools)"
+    labels:
+      - "dependencies"
+      - "tools"
+
+  # Anthropic SDK (Python)
+  - package-ecosystem: "pip"
+    directory: "/packages/tools/anthropic-sdk-python"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(tools)"
+    labels:
+      - "dependencies"
+      - "tools"
+
+  # Infrastructure
+  - package-ecosystem: "npm"
+    directory: "/packages/infrastructure/firebaseui-web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(infra)"
+    labels:
+      - "dependencies"
+      - "infrastructure"
+
+  - package-ecosystem: "npm"
+    directory: "/packages/infrastructure/echosync-v6"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(infra)"
+    labels:
+      - "dependencies"
+      - "infrastructure"
