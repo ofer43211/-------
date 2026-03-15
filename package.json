@@ -22,6 +22,8 @@
     "link:status": "node tools/link-projects.js --status",
     "link:clean": "node tools/link-projects.js --clean",
     "docs:generate": "node tools/generate-docs.js",
+    "fix:html": "python3 tools/fix_html.py",
+    "fix:launcher": "python3 tools/build_launcher_v2.py --root J:\\html\\rotem_fixed --out J:\\html\\rotem_launcher_fixed.html",
     "clean": "rm -rf node_modules packages/*/node_modules"
   },
   "devDependencies": {
