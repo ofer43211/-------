@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "description": "MOXO-only access tokens for RoTEM student journey",
+  "course_lock": "moxo",
+  "tokens": {
+    "MOXO-7291-A": {
+      "label": "MOXO-01",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-1142-B": {
+      "label": "MOXO-02",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-8830-C": {
+      "label": "MOXO-03",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-5509-D": {
+      "label": "MOXO-04",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-2218-E": {
+      "label": "MOXO-05",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-9937-F": {
+      "label": "MOXO-06",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-4416-G": {
+      "label": "MOXO-07",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-1105-H": {
+      "label": "MOXO-08",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-7744-I": {
+      "label": "MOXO-09",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    },
+    "MOXO-3382-J": {
+      "label": "MOXO-10",
+      "status": "available",
+      "locked_device": null,
+      "activated_at": null,
+      "last_seen": null
+    }
+  }
+}

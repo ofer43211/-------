@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoTEM Academy | MOXO Assessment Journey</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #1a56db;
+            --accent: #10b981;
+            --dark: #0f172a;
+            --text: #334155;
+            --text-light: #64748b;
+            --bg: #f8fafc;
+            --font: 'Inter', -apple-system, sans-serif;
+        }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .journey-header {
+            background: var(--dark);
+            color: #fff;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .journey-logo {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .journey-logo span { color: var(--primary); }
+        .journey-token-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(26,86,219,0.2);
+            border: 1px solid rgba(26,86,219,0.4);
+            border-radius: 100px;
+            padding: 4px 12px;
+            color: #93bbfd;
+        }
+        .journey-main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 24px;
+        }
+        .journey-card {
+            max-width: 600px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            padding: 48px 40px;
+            text-align: center;
+        }
+        .journey-card h1 {
+            font-size: 1.6rem;
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+        .journey-card p {
+            color: var(--text-light);
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+        .journey-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.3);
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+            color: #059669;
+            font-size: 0.9rem;
+        }
+        .journey-status::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: blink 1.5s ease infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .journey-progress {
+            margin-top: 32px;
+            text-align: left;
+        }
+        .journey-progress h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-light);
+            margin-bottom: 16px;
+        }
+        .gate-list { list-style: none; }
+        .gate-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+        .gate-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--text-light);
+            flex-shrink: 0;
+        }
+        .gate-item.current .gate-dot {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<header class="journey-header">
+    <div class="journey-logo">RoTEM<span>Academy</span></div>
+    <div class="journey-token-badge" id="tokenBadge">MOXO Session</div>
+</header>
+
+<main class="journey-main">
+    <div class="journey-card">
+        <h1>MOXO Assessment Journey</h1>
+        <p>
+            Welcome to your personalised MOXO assessment pathway.
+            Your session is secured and monitored by our clinical team.
+        </p>
+        <div class="journey-status">Session Active &mdash; Connected</div>
+
+        <div class="journey-progress">
+            <h3>Assessment Gates</h3>
+            <ul class="gate-list">
+                <li class="gate-item current">
+                    <div class="gate-dot">1</div>
+                    <span>Orientation &amp; Consent</span>
+                </li>
+                <li class="gate-item">
+                    <div class="gate-dot">2</div>
+                    <span>Hormonal Response Identification</span>
+                </li>
+                <li class="gate-item">
+                    <div class="gate-dot">3</div>
+                    <span>MOXO Continuous Performance Test</span>
+                </li>
+                <li class="gate-item">
+                    <div class="gate-dot">4</div>
+                    <span>AI Analysis &amp; Feedback</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</main>
+
+<script>
+(function () {
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    var badge = document.getElementById('tokenBadge');
+    if (token && badge) {
+        badge.textContent = token;
+    }
+})();
+</script>
+</body>
+</html>
