@@ -7,6 +7,7 @@ node_modules/
 packages/*/*/
 !packages/*/README.md
 !packages/infrastructure/tailscale-exit-nodes/
+!packages/rotem/student-ui-clean/
 
 # Build outputs
 dist/
