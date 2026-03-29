@@ -134,6 +134,63 @@
             background: var(--primary);
             color: #fff;
         }
+
+        /* Video Player */
+        .video-section {
+            margin-top: 32px;
+            text-align: left;
+        }
+        .video-section h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-light);
+            margin-bottom: 12px;
+        }
+        .video-wrap {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 16/9;
+        }
+        .video-wrap video {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .video-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+        .video-overlay.hidden { opacity: 0; pointer-events: none; }
+        .video-play-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(26,86,219,0.4);
+            transition: transform 0.2s ease;
+        }
+        .video-play-btn:hover { transform: scale(1.1); }
+        .video-play-btn svg { margin-left: 4px; }
+        .video-error {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +208,23 @@
             Your session is secured and monitored by our clinical team.
         </p>
         <div class="journey-status">Session Active &mdash; Connected</div>
+
+        <!-- Video Player -->
+        <div class="video-section" id="videoSection">
+            <h3>Lesson Video</h3>
+            <div class="video-wrap">
+                <video id="journeyVideo" preload="metadata" crossorigin="anonymous"
+                       playsinline controlsList="nodownload">
+                    <!-- src set dynamically by interceptor -->
+                </video>
+                <div class="video-overlay" id="videoOverlay">
+                    <button class="video-play-btn" id="videoPlayBtn" aria-label="Play video">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <p class="video-error" id="videoError">Video could not be loaded. Please refresh or contact support.</p>
+        </div>
 
         <div class="journey-progress">
             <h3>Assessment Gates</h3>
@@ -184,6 +258,103 @@
     if (token && badge) {
         badge.textContent = token;
     }
+
+    // --- Video URL Interceptor (v1.9-FORCE-MEDIA-FIX) ---
+    // Strips localhost/127.0.0.1 from any video URL and routes through proxy.
+    var video = document.getElementById('journeyVideo');
+    var overlay = document.getElementById('videoOverlay');
+    var playBtn = document.getElementById('videoPlayBtn');
+    var errorEl = document.getElementById('videoError');
+
+    /**
+     * Normalise a media URL:
+     * - http://127.0.0.1:9999/quarry/video.mp4 → /proxy/9999/quarry/video.mp4
+     * - http://localhost:9999/media/clip.mp4   → /proxy/9999/media/clip.mp4
+     * - /quarry/video.mp4                      → /proxy/9999/quarry/video.mp4
+     * - Already relative /proxy/...            → unchanged
+     */
+    function normaliseMediaUrl(raw) {
+        if (!raw) return raw;
+        var s = raw.trim();
+
+        // Strip absolute localhost URLs → extract path and port
+        var localMatch = s.match(
+            /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::(\d+))?(\/.*)/i
+        );
+        if (localMatch) {
+            var port = localMatch[1] || '9999';
+            var path = localMatch[2];
+            return '/proxy/' + port + path;
+        }
+
+        // Bare path like /quarry/... or /media/... that isn't already proxied
+        if (s.charAt(0) === '/' && s.indexOf('/proxy/') !== 0) {
+            return '/proxy/9999' + s;
+        }
+
+        return s;
+    }
+
+    /**
+     * Load video from a URL (called by blueprint data or fallback).
+     */
+    function loadVideo(rawUrl) {
+        if (!video || !rawUrl) return;
+        var url = normaliseMediaUrl(rawUrl);
+        video.src = url;
+        video.load();
+    }
+
+    // Error handling — show message if video fails
+    if (video) {
+        video.addEventListener('error', function () {
+            if (errorEl) errorEl.style.display = 'block';
+        });
+
+        video.addEventListener('loadedmetadata', function () {
+            if (errorEl) errorEl.style.display = 'none';
+        });
+    }
+
+    // Play button overlay
+    if (playBtn && video && overlay) {
+        playBtn.addEventListener('click', function () {
+            if (!video.src || video.src === window.location.href) {
+                // No video loaded yet — try default MOXO intro path
+                loadVideo('/quarry/moxo_intro.mp4');
+            }
+            video.play().then(function () {
+                overlay.classList.add('hidden');
+                video.setAttribute('controls', '');
+            }).catch(function () {
+                if (errorEl) errorEl.style.display = 'block';
+            });
+        });
+
+        video.addEventListener('pause', function () {
+            if (video.ended) {
+                overlay.classList.remove('hidden');
+            }
+        });
+    }
+
+    // --- Intercept any dynamically injected video URLs ---
+    // If the blueprint/orchestrator pushes a video URL via postMessage or
+    // data attribute, normalise it before the browser tries to fetch.
+    window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'rotem-video' && e.data.url) {
+            loadVideo(e.data.url);
+        }
+    });
+
+    // Also check for a data attribute on the video element (set by server-side injection)
+    if (video && video.dataset.src) {
+        loadVideo(video.dataset.src);
+    }
+
+    // Expose globally for orchestrator integration
+    window.RoTEM_loadVideo = loadVideo;
+    window.RoTEM_normaliseMediaUrl = normaliseMediaUrl;
 })();
 </script>
 </body>
