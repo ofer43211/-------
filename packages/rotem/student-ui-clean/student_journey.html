@@ -266,30 +266,37 @@
     var playBtn = document.getElementById('videoPlayBtn');
     var errorEl = document.getElementById('videoError');
 
+    // R2 CDN base URL for media files
+    var R2_BASE = 'https://pub-59bba3fd2d1946dd8a44c75f41803059.r2.dev';
+
     /**
      * Normalise a media URL:
-     * - http://127.0.0.1:9999/quarry/video.mp4 → /proxy/9999/quarry/video.mp4
-     * - http://localhost:9999/media/clip.mp4   → /proxy/9999/media/clip.mp4
-     * - /quarry/video.mp4                      → /proxy/9999/quarry/video.mp4
-     * - Already relative /proxy/...            → unchanged
+     * - http://127.0.0.1:9999/quarry/video.mp4 → R2_BASE/quarry/video.mp4
+     * - http://localhost:9999/media/clip.mp4   → R2_BASE/media/clip.mp4
+     * - /quarry/video.mp4                      → R2_BASE/quarry/video.mp4
+     * - /media/clip.mp4                        → R2_BASE/media/clip.mp4
+     * - Already full https://...               → unchanged
      */
     function normaliseMediaUrl(raw) {
         if (!raw) return raw;
         var s = raw.trim();
 
-        // Strip absolute localhost URLs → extract path and port
+        // Already a full external URL (not localhost) — leave as is
+        if (/^https?:\/\//i.test(s) && !/127\.0\.0\.1|localhost/i.test(s)) {
+            return s;
+        }
+
+        // Strip absolute localhost URLs → extract path
         var localMatch = s.match(
             /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::(\d+))?(\/.*)/i
         );
         if (localMatch) {
-            var port = localMatch[1] || '9999';
-            var path = localMatch[2];
-            return '/proxy/' + port + path;
+            return R2_BASE + localMatch[2];
         }
 
-        // Bare path like /quarry/... or /media/... that isn't already proxied
-        if (s.charAt(0) === '/' && s.indexOf('/proxy/') !== 0) {
-            return '/proxy/9999' + s;
+        // Bare path like /quarry/... or /media/... → route to R2
+        if (s.charAt(0) === '/') {
+            return R2_BASE + s;
         }
 
         return s;
