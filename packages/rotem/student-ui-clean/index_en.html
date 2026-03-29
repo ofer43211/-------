@@ -20,6 +20,7 @@
             <span class="logo-text">RoTEM<span class="logo-accent">Academy</span></span>
         </a>
         <ul class="nav-links">
+            <li><a href="#pulse">Pulse Check</a></li>
             <li><a href="#about">About</a></li>
             <li><a href="#services">Services</a></li>
             <li><a href="#method">Our Method</a></li>
@@ -77,6 +78,50 @@
         </div>
     </div>
 </header>
+
+<!-- Pulse Check Section -->
+<section class="section section-pulse" id="pulse">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag section-tag-light">Live Demo</span>
+            <h2 class="section-title section-title-light">Experience Your Neural Signature</h2>
+            <p class="section-desc section-desc-light">
+                See how RoTEM reads cognitive patterns in real time.
+                Move your mouse or type &mdash; watch your signature form.
+            </p>
+        </div>
+        <div class="pulse-widget" id="pulseWidget">
+            <!-- Waveform canvas -->
+            <div class="pulse-canvas-wrap">
+                <canvas id="pulseCanvas" width="720" height="200"></canvas>
+            </div>
+            <!-- AI Insight bubble -->
+            <div class="pulse-insight" id="pulseInsight">
+                <div class="pulse-insight-avatar">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <p class="pulse-insight-text" id="pulseInsightText">
+                    Press <strong>Start Pulse Scan</strong> to begin&hellip;
+                </p>
+            </div>
+            <!-- Controls -->
+            <div class="pulse-controls">
+                <button class="btn btn-primary btn-lg" id="pulseStartBtn">
+                    Start Pulse Scan
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+            </div>
+            <!-- Lead gate (hidden until scan completes) -->
+            <div class="pulse-lead-gate" id="pulseLeadGate" style="display:none;">
+                <p>Enter your email to receive your full Neural Signature report:</p>
+                <form class="pulse-lead-form" id="pulseLeadForm">
+                    <input type="email" id="pulseEmail" name="email" required placeholder="you@clinic.co.uk">
+                    <button type="submit" class="btn btn-primary">Get My Report</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
 
 <!-- About Section -->
 <section class="section" id="about">
