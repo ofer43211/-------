@@ -82,6 +82,39 @@ def validate_token(token, device_fingerprint=None):
             "course_lock": store.get("course_lock", "moxo"),
         }
 
+
+def provision_token(name, email, location=""):
+    """Create a new MOXO token dynamically (for Lovable webhook leads).
+
+    Returns the token string and its label.
+    """
+    with _auth_lock:
+        store = _load_auth_store()
+        tokens = store.setdefault("tokens", {})
+
+        # Generate a unique token
+        suffix = uuid.uuid4().hex[:6].upper()
+        token_id = f"MOXO-{suffix}"
+        seq = len(tokens) + 1
+        label = f"MOXO-{seq:02d}"
+
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        tokens[token_id] = {
+            "label": label,
+            "status": "provisioned",
+            "locked_device": None,
+            "activated_at": None,
+            "last_seen": None,
+            "provisioned_at": now,
+            "lead": {
+                "name": name,
+                "email": email,
+                "location": location,
+            },
+        }
+        _save_auth_store(store)
+        return token_id, label
+
 # English-speaking country IP ranges would be resolved via GeoIP in production.
 # For now, we use heuristics: query params, cookies, and Accept-Language header.
 ENGLISH_LANGUAGE_PREFIXES = ("en",)
@@ -194,6 +227,15 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Let the default handler serve static files
         super().do_GET()
 
+    def do_OPTIONS(self):
+        """Handle CORS preflight for webhook endpoints."""
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.end_headers()
+
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
 
@@ -201,7 +243,70 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_contact_form()
             return
 
+        if parsed.path == "/api/webhooks/lovable":
+            self._handle_lovable_webhook()
+            return
+
         self.send_error(404, "Not Found")
+
+    def _handle_lovable_webhook(self):
+        """Accept leads from Lovable app and provision a MOXO token.
+
+        POST /api/webhooks/lovable
+        Body: {"name": "...", "email": "...", "location": "..."}
+        Returns: {"token": "MOXO-XXXXXX", "label": "MOXO-11",
+                  "journey_url": "/student_journey.html?token=MOXO-XXXXXX"}
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        if content_length > 10_000:
+            self._json_error(413, "too_large", "Request too large")
+            return
+
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        name = data.get("name", "").strip()
+        email = data.get("email", "").strip()
+        location = data.get("location", "").strip()
+
+        if not name or not email:
+            self._json_error(400, "missing_fields", "name and email are required")
+            return
+
+        token_id, label = provision_token(name, email, location)
+
+        journey_url = f"/student_journey.html?token={token_id}"
+
+        # Log the lead
+        log_path = BASE_DIR / "enquiries.log"
+        try:
+            now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"--- Lovable Lead [{now}] ---\n")
+                f.write(f"Name: {name}\nEmail: {email}\nLocation: {location}\n")
+                f.write(f"Token: {token_id} ({label})\n\n")
+        except Exception:
+            pass
+
+        response = json.dumps({
+            "status": "ok",
+            "token": token_id,
+            "label": label,
+            "journey_url": journey_url,
+            "message": f"Session provisioned for {name}",
+        })
+        self.send_response(201)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
 
     def _handle_student_journey(self, parsed):
         """Gate student_journey.html behind a valid MOXO token."""
