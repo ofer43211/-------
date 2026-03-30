@@ -576,6 +576,104 @@
             animation: macro-anomaly-border 2s ease infinite;
         }
 
+        /* --- v9.7 Emergency Protocol Overlays --- */
+        .protocol-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        .protocol-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Intervention Overlay (Red/Dark glassmorphism) */
+        .protocol-overlay.intervention {
+            background: rgba(15,5,5,0.85);
+        }
+        .intervention-card {
+            background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(30,10,10,0.9));
+            border: 1px solid rgba(239,68,68,0.4);
+            border-radius: 16px;
+            padding: 40px 36px;
+            max-width: 440px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(239,68,68,0.15), inset 0 0 30px rgba(239,68,68,0.05);
+        }
+        .intervention-card h2 {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--red);
+            margin-bottom: 16px;
+        }
+        .intervention-card p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text);
+            margin-bottom: 24px;
+        }
+        .intervention-ack-btn {
+            background: var(--red-dim);
+            border: 1px solid rgba(239,68,68,0.4);
+            color: var(--red);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .intervention-ack-btn:hover {
+            background: rgba(239,68,68,0.25);
+            box-shadow: 0 0 16px rgba(239,68,68,0.25);
+        }
+
+        /* Hard Clear / Recalibration Overlay */
+        .protocol-overlay.hard-clear {
+            background: rgba(0,0,0,0.95);
+        }
+        .recalibration-ui {
+            text-align: center;
+        }
+        .recalibration-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(0,240,255,0.15);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: recal-spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes recal-spin {
+            to { transform: rotate(360deg); }
+        }
+        .recalibration-ui h2 {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--cyan);
+            margin-bottom: 8px;
+        }
+        .recalibration-ui p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
         /* --- Responsive --- */
         @media (max-width: 768px) {
             .journey-main {
@@ -593,6 +691,23 @@
 <div class="insight-toast" id="insightToast"></div>
 <!-- Bandwidth Soft Nudge -->
 <div class="bandwidth-nudge" id="bandwidthNudge">Great energy! Consider leaving room for others to share.</div>
+
+<!-- v9.7 Emergency Protocol Overlays -->
+<div class="protocol-overlay intervention" id="interventionOverlay">
+    <div class="intervention-card">
+        <h2>Clinical Intervention Protocol</h2>
+        <p id="interventionReason">The supervising clinician has paused your session. Please wait for instructions.</p>
+        <button class="intervention-ack-btn" id="interventionAckBtn">Acknowledge Protocol</button>
+    </div>
+</div>
+
+<div class="protocol-overlay hard-clear" id="hardClearOverlay">
+    <div class="recalibration-ui">
+        <div class="recalibration-spinner"></div>
+        <h2>Recalibrating Environment</h2>
+        <p>Resetting neural parameters. Please stand by...</p>
+    </div>
+</div>
 
 <header class="journey-header">
     <div class="journey-logo">RoTEM<span>:</span>MOXO</div>
@@ -963,6 +1078,30 @@
             } catch (err) {}
         });
 
+        // v9.7 — Emergency Protocol SSE listeners
+        eventSource.addEventListener('INTERVENTION_TRIGGERED', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                var overlay = document.getElementById('interventionOverlay');
+                var reasonEl = document.getElementById('interventionReason');
+                if (reasonEl && data.reason) reasonEl.textContent = data.reason;
+                if (overlay) overlay.classList.add('active');
+                // Pause video
+                if (video && !video.paused) video.pause();
+            } catch (err) {}
+        });
+
+        eventSource.addEventListener('HARD_CLEAR', function (e) {
+            var overlay = document.getElementById('hardClearOverlay');
+            if (overlay) overlay.classList.add('active');
+            // Pause video
+            if (video && !video.paused) video.pause();
+            // Force reload after recalibration animation
+            setTimeout(function () {
+                window.location.reload();
+            }, 3500);
+        });
+
         eventSource.addEventListener('ACTIVE_PROBE', function (e) {
             try {
                 var data = JSON.parse(e.data);
@@ -1093,6 +1232,16 @@
             body: JSON.stringify(telemetry)
         }).catch(function () { /* silent */ });
     }, 10000);
+
+    // --- Intervention Acknowledge ---
+    var interventionAckBtn = document.getElementById('interventionAckBtn');
+    if (interventionAckBtn) {
+        interventionAckBtn.addEventListener('click', function () {
+            var overlay = document.getElementById('interventionOverlay');
+            if (overlay) overlay.classList.remove('active');
+            addBubble('Session resumed. The clinician has cleared you to continue.', 'nitzutz');
+        });
+    }
 
     // --- External integrations ---
     window.addEventListener('message', function (e) {

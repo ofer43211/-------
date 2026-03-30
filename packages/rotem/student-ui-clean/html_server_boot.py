@@ -442,6 +442,15 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_sensor_fusion()
             return
 
+        # v9.7 — Emergency Protocols
+        if parsed.path == "/api/system/intervention":
+            self._handle_intervention()
+            return
+
+        if parsed.path == "/api/system/hard-clear":
+            self._handle_hard_clear()
+            return
+
         self.send_error(404, "Not Found")
 
     def _handle_lovable_webhook(self):
@@ -858,6 +867,122 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if client_entry in _sse_clients:
                     _sse_clients.remove(client_entry)
 
+    # =========================================================
+    # v9.7 — Emergency Protocols (Intervention & Hard Clear)
+    # =========================================================
+
+    def _handle_intervention(self):
+        """POST /api/system/intervention — Therapist triggers clinical intervention.
+
+        Pauses the student environment and demands acknowledgment.
+        Body: {"token": "MOXO-XXXX", "reason": "...", "global": false}
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        tok = data.get("token", "")
+        reason = data.get("reason", "Clinical protocol triggered by therapist.")
+        is_global = data.get("global", False)
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+        event_data = {
+            "type": "intervention",
+            "reason": reason,
+            "triggered_at": now,
+            "triggered_by": "architect",
+        }
+
+        if is_global:
+            sse_broadcast("INTERVENTION_TRIGGERED", event_data)
+        else:
+            sse_broadcast("INTERVENTION_TRIGGERED", event_data, token_filter=tok)
+
+        response = json.dumps({
+            "status": "ok",
+            "message": f"Intervention triggered for {'all students' if is_global else tok}",
+            "event": event_data,
+        })
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_hard_clear(self):
+        """POST /api/system/hard-clear — Full environment reset (Master Reset).
+
+        Triggers un-dismissible recalibration overlay → forces page reload.
+        Body: {"token": "MOXO-XXXX", "global": false}
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        tok = data.get("token", "")
+        is_global = data.get("global", False)
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+        # Reset bandwidth for affected student(s)
+        if is_global:
+            for bw in _student_bandwidth.values():
+                bw["bandwidth_ms"] = DEFAULT_BANDWIDTH_MS
+                bw["is_overtime"] = False
+        elif tok in _student_bandwidth:
+            _student_bandwidth[tok]["bandwidth_ms"] = DEFAULT_BANDWIDTH_MS
+            _student_bandwidth[tok]["is_overtime"] = False
+
+        event_data = {
+            "type": "hard_clear",
+            "triggered_at": now,
+            "triggered_by": "architect",
+            "bandwidth_reset": True,
+        }
+
+        if is_global:
+            sse_broadcast("HARD_CLEAR", event_data)
+        else:
+            sse_broadcast("HARD_CLEAR", event_data, token_filter=tok)
+
+        # Also forward to Nitzutz for context purge
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                "http://127.0.0.1:9997/reset-context",
+                data=json.dumps({
+                    "force_context_reset": True,
+                    "token": tok,
+                    "reason": "hard_clear_master_reset",
+                    "purge_all": True,
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            urllib.request.urlopen(req, timeout=5)
+        except Exception:
+            pass
+
+        response = json.dumps({
+            "status": "ok",
+            "message": f"Hard clear executed for {'all students' if is_global else tok}",
+            "event": event_data,
+        })
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
     def _handle_student_journey(self, parsed):
         """Gate student_journey.html behind a valid MOXO token."""
         query = urllib.parse.parse_qs(parsed.query)
@@ -1015,11 +1140,26 @@ def main():
         allow_reuse_address = True
         daemon_threads = True
 
+    # v9.7: Background macro-anomaly detection loop (every 5s)
+    def _macro_anomaly_loop():
+        while True:
+            time.sleep(5)
+            try:
+                anomaly = detect_timeline_clusters()
+                if anomaly:
+                    sse_broadcast("MACRO_ANOMALY", anomaly)
+            except Exception:
+                pass
+
+    anomaly_thread = threading.Thread(target=_macro_anomaly_loop, daemon=True)
+    anomaly_thread.start()
+
     with ThreadedTCPServer((args.host, args.port), handler) as httpd:
         print(f"RoTEM Student UI serving on http://{args.host}:{args.port}")
         print(f"  English: http://{args.host}:{args.port}/?lang=en")
         print(f"  Hebrew:  http://{args.host}:{args.port}/?lang=he")
         print(f"  Auto-detect: http://{args.host}:{args.port}/")
+        print(f"  v9.7: Macro-anomaly detection active (5s loop)")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
