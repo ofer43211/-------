@@ -202,6 +202,12 @@ def sse_broadcast(event_type, data, token_filter=None):
 _student_telemetry = {}  # token -> list of recent SensorTelemetry
 AMBIGUITY_THRESHOLD = 0.5
 
+# --- Neural Bandwidth (Chess Clock v8.0 — Shadow Mode) ---
+DEFAULT_BANDWIDTH_MS = 180_000  # 3 minutes
+BANDWIDTH_BONUS_MS = 60_000    # +1 minute on merge
+BANDWIDTH_DECREMENT_MS = 10_000  # per 10s telemetry tick when voice active
+_student_bandwidth = {}  # token -> {"bandwidth_ms": int, "is_overtime": bool}
+
 
 def analyze_cognitive_state(telemetry):
     """Evaluate sensor fusion for cognitive state.
@@ -631,7 +637,23 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         insight_id = commit_insight(tok, content, vts, lineage)
 
-        response = json.dumps({"status": "ok", "insight_id": insight_id})
+        # v8.0: Tag overtime status on the committed insight
+        is_overtime = False
+        if tok in _student_bandwidth and _student_bandwidth[tok]["is_overtime"]:
+            is_overtime = True
+            with _knowledge_lock:
+                kb = _load_knowledge_base()
+                for ins in kb.get("insights", []):
+                    if ins["id"] == insight_id:
+                        ins["is_overtime"] = True
+                        break
+                _save_knowledge_base(kb)
+
+        response = json.dumps({
+            "status": "ok",
+            "insight_id": insight_id,
+            "is_overtime": is_overtime,
+        })
         self.send_response(201)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(response)))
@@ -662,11 +684,28 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._json_error(404, "not_found", "Insight not found or already merged")
             return
 
+        # v8.0: Award bandwidth bonus to the student
+        student_tok = merged.get("student_id", "")
+        bonus_awarded = 0
+        if student_tok and student_tok in _student_bandwidth:
+            bw = _student_bandwidth[student_tok]
+            bw["bandwidth_ms"] += BANDWIDTH_BONUS_MS
+            if bw["bandwidth_ms"] > 0:
+                bw["is_overtime"] = False
+            bonus_awarded = BANDWIDTH_BONUS_MS
+            sse_broadcast("BANDWIDTH_UPDATE", {
+                "token": student_tok,
+                "bandwidth_ms": bw["bandwidth_ms"],
+                "is_overtime": bw["is_overtime"],
+                "bonus_ms": bonus_awarded,
+            })
+
         # Broadcast Gold Flash to the student who committed it
         sse_broadcast("INSIGHT_MERGED", {
             "insight_id": merged["id"],
             "message": "Clinical Insight Verified & Merged into RoTEM Base.",
-        }, token_filter=merged.get("student_id"))
+            "bandwidth_bonus_ms": bonus_awarded,
+        }, token_filter=student_tok)
 
         response = json.dumps({"status": "ok", "merged": merged})
         self.send_response(200)
@@ -704,10 +743,30 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         tok = data.get("token", "")
+        is_voice_active = data.get("isVoiceActive", False)
         state, scores = analyze_cognitive_state(data)
 
         # Compute energy score (0–1)
         energy = sum(scores.values()) / len(scores) if scores else 0.5
+
+        # --- v8.0 Chess Clock: decrement bandwidth if voice active ---
+        if tok:
+            if tok not in _student_bandwidth:
+                _student_bandwidth[tok] = {
+                    "bandwidth_ms": DEFAULT_BANDWIDTH_MS,
+                    "is_overtime": False,
+                }
+            bw = _student_bandwidth[tok]
+            if is_voice_active:
+                bw["bandwidth_ms"] -= BANDWIDTH_DECREMENT_MS
+                if bw["bandwidth_ms"] <= 0:
+                    bw["is_overtime"] = True
+            # Broadcast bandwidth update to this student + Command Deck
+            sse_broadcast("BANDWIDTH_UPDATE", {
+                "token": tok,
+                "bandwidth_ms": bw["bandwidth_ms"],
+                "is_overtime": bw["is_overtime"],
+            })
 
         # Log for macro telemetry
         _session_energy_log.append({
@@ -846,6 +905,7 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         tokens = store.get("tokens", {})
         summary = []
         for tid, entry in tokens.items():
+            bw_info = _student_bandwidth.get(tid, {})
             summary.append({
                 "token": tid,
                 "label": entry.get("label"),
@@ -853,6 +913,8 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
                 "activated_at": entry.get("activated_at"),
                 "last_seen": entry.get("last_seen"),
                 "has_device": bool(entry.get("locked_device")),
+                "neural_bandwidth_ms": bw_info.get("bandwidth_ms", DEFAULT_BANDWIDTH_MS),
+                "is_overtime": bw_info.get("is_overtime", False),
             })
         body = json.dumps({"tokens": summary, "total": len(summary)})
         self.send_response(200)

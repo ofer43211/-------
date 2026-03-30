@@ -481,6 +481,92 @@
             animation: pulse-dot 2s ease infinite;
         }
 
+        /* --- Chess Clock (Neural Bandwidth v8.0) --- */
+        .bandwidth-clock {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--cyan);
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.2);
+            transition: all 0.4s ease;
+            white-space: nowrap;
+        }
+        .bandwidth-clock.low {
+            color: var(--amber);
+            background: var(--amber-dim);
+            border-color: rgba(245,158,11,0.3);
+            animation: clock-pulse-orange 1.5s ease infinite;
+        }
+        .bandwidth-clock.overtime {
+            color: var(--red);
+            background: var(--red-dim);
+            border-color: rgba(239,68,68,0.3);
+            animation: clock-pulse-red 1s ease infinite;
+        }
+        @keyframes clock-pulse-orange {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+            50% { box-shadow: 0 0 8px 2px rgba(245,158,11,0.25); }
+        }
+        @keyframes clock-pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); opacity: 0.7; }
+            50% { box-shadow: 0 0 10px 3px rgba(239,68,68,0.2); opacity: 1; }
+        }
+        .bandwidth-clock svg {
+            flex-shrink: 0;
+        }
+
+        /* Bonus float animation */
+        .bandwidth-bonus-float {
+            position: absolute;
+            top: -8px;
+            right: 0;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #FFD700;
+            pointer-events: none;
+            animation: bonus-float-up 1.8s cubic-bezier(0.16,1,0.3,1) forwards;
+            text-shadow: 0 0 8px rgba(255,215,0,0.5);
+            z-index: 10;
+        }
+        @keyframes bonus-float-up {
+            0% { opacity: 0; transform: translateY(0) scale(0.8); }
+            15% { opacity: 1; transform: translateY(-4px) scale(1.15); }
+            100% { opacity: 0; transform: translateY(-32px) scale(0.9); }
+        }
+
+        /* Soft nudge toast */
+        .bandwidth-nudge {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(245,158,11,0.06));
+            border: 1px solid rgba(245,158,11,0.25);
+            border-radius: 12px;
+            padding: 12px 18px;
+            font-size: 0.8rem;
+            color: var(--amber);
+            font-family: var(--font);
+            backdrop-filter: blur(12px);
+            z-index: 9998;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+            pointer-events: none;
+            max-width: 320px;
+        }
+        .bandwidth-nudge.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         /* Macro Anomaly border pulse */
         @keyframes macro-anomaly-border {
             0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
@@ -505,6 +591,8 @@
 
 <!-- Gold Flash Toast -->
 <div class="insight-toast" id="insightToast"></div>
+<!-- Bandwidth Soft Nudge -->
+<div class="bandwidth-nudge" id="bandwidthNudge">Great energy! Consider leaving room for others to share.</div>
 
 <header class="journey-header">
     <div class="journey-logo">RoTEM<span>:</span>MOXO</div>
@@ -543,8 +631,12 @@
     <!-- Right: Sidebar -->
     <div class="sidebar-panel">
         <!-- Nitzutz Header + Rescue Button -->
-        <div class="nitzutz-header">
+        <div class="nitzutz-header" style="flex-wrap: wrap; gap: 8px;">
             <div class="nitzutz-title">Nitzutz AI</div>
+            <div class="bandwidth-clock" id="bandwidthClock" style="position:relative;" title="Neural Bandwidth — time remaining on Live Neural Link">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span id="bandwidthTimer">3:00</span>
+            </div>
             <button class="insight-commit-btn" id="insightCommitBtn" title="Commit a clinical insight to the Knowledge Base">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                 Commit Insight
@@ -733,8 +825,52 @@
     var insightToast = document.getElementById('insightToast');
     var insightCommitBtn = document.getElementById('insightCommitBtn');
 
+    // --- Chess Clock (Neural Bandwidth v8.0) ---
+    var bandwidthClock = document.getElementById('bandwidthClock');
+    var bandwidthTimer = document.getElementById('bandwidthTimer');
+    var bandwidthNudge = document.getElementById('bandwidthNudge');
+    var currentBandwidthMs = 180000;
+    var nudgeShown = false;
+
+    function formatBandwidth(ms) {
+        var negative = ms < 0;
+        var abs = Math.abs(ms);
+        var totalSec = Math.ceil(abs / 1000);
+        var min = Math.floor(totalSec / 60);
+        var sec = totalSec % 60;
+        return (negative ? '-' : '') + min + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    function updateClockUI(ms) {
+        currentBandwidthMs = ms;
+        if (bandwidthTimer) bandwidthTimer.textContent = formatBandwidth(ms);
+        if (!bandwidthClock) return;
+        bandwidthClock.classList.remove('low', 'overtime');
+        if (ms <= 0) {
+            bandwidthClock.classList.add('overtime');
+            // Show soft nudge once
+            if (!nudgeShown && bandwidthNudge) {
+                nudgeShown = true;
+                bandwidthNudge.classList.add('show');
+                setTimeout(function () { bandwidthNudge.classList.remove('show'); }, 6000);
+            }
+        } else if (ms <= 30000) {
+            bandwidthClock.classList.add('low');
+        }
+    }
+
+    function showBonusAnimation(bonusMs) {
+        if (!bandwidthClock) return;
+        var bonusSec = Math.round(bonusMs / 1000);
+        var floater = document.createElement('span');
+        floater.className = 'bandwidth-bonus-float';
+        floater.textContent = '+' + Math.floor(bonusSec / 60) + ':' + (bonusSec % 60 < 10 ? '0' : '') + (bonusSec % 60);
+        bandwidthClock.appendChild(floater);
+        setTimeout(function () { if (floater.parentNode) floater.parentNode.removeChild(floater); }, 2000);
+    }
+
     // --- Gold Energy Flash ---
-    function triggerGoldFlash(message) {
+    function triggerGoldFlash(message, bonusMs) {
         // Flash the HUD progress ring
         var videoPanel = document.querySelector('.video-panel');
         if (videoPanel) {
@@ -747,6 +883,11 @@
             insightToast.textContent = message || 'Clinical Insight Verified & Merged into RoTEM Base.';
             insightToast.classList.add('show');
             setTimeout(function () { insightToast.classList.remove('show'); }, 4000);
+        }
+
+        // Show bonus time animation on the chess clock
+        if (bonusMs && bonusMs > 0) {
+            showBonusAnimation(bonusMs);
         }
     }
 
@@ -801,10 +942,25 @@
         eventSource.addEventListener('INSIGHT_MERGED', function (e) {
             try {
                 var data = JSON.parse(e.data);
-                triggerGoldFlash(data.message || 'Clinical Insight Verified & Merged into RoTEM Base.');
+                triggerGoldFlash(
+                    data.message || 'Clinical Insight Verified & Merged into RoTEM Base.',
+                    data.bandwidth_bonus_ms || 0
+                );
             } catch (err) {
                 triggerGoldFlash();
             }
+        });
+
+        eventSource.addEventListener('BANDWIDTH_UPDATE', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                updateClockUI(data.bandwidth_ms);
+                if (data.bonus_ms && data.bonus_ms > 0) {
+                    showBonusAnimation(data.bonus_ms);
+                    // Reset nudge flag if back above zero
+                    if (data.bandwidth_ms > 0) nudgeShown = false;
+                }
+            } catch (err) {}
         });
 
         eventSource.addEventListener('ACTIVE_PROBE', function (e) {
@@ -851,7 +1007,13 @@
         lastMouseTime: 0,
         keyPresses: [],
         lastKeyTime: 0,
-        focusLost: false
+        focusLost: false,
+        isVoiceActive: false  // Set by Neural Link mic integration
+    };
+
+    // Expose so Gemini's Neural Link can flag voice activity
+    window.RoTEM_setVoiceActive = function (active) {
+        sensorState.isVoiceActive = !!active;
     };
 
     // Track mouse dynamics
@@ -921,7 +1083,8 @@
             camera_state: sensorState.focusLost ? 'zoning_out' : 'focused',
             mouse_dynamics: idle ? 'idle' : classifyMouseDynamics(),
             typing_cadence: classifyTypingCadence(),
-            tab_visible: !document.hidden
+            tab_visible: !document.hidden,
+            isVoiceActive: sensorState.isVoiceActive
         };
 
         fetch('/api/telemetry/sensor-fusion', {
