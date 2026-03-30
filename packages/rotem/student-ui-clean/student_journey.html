@@ -663,6 +663,67 @@
             animation: macro-anomaly-border 2s ease infinite;
         }
 
+        /* --- v12.1 Security HUD & Nuclear Protocol --- */
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            font-weight: 500;
+            color: var(--green);
+            letter-spacing: 0.04em;
+        }
+        .security-badge svg { flex-shrink: 0; }
+
+        /* Nuclear protocol overlay */
+        .protocol-overlay.nuclear {
+            background: rgba(20,0,0,0.92);
+        }
+        .nuclear-card {
+            background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(30,0,0,0.95));
+            border: 2px solid rgba(239,68,68,0.6);
+            border-radius: 16px;
+            padding: 40px 36px;
+            max-width: 440px;
+            text-align: center;
+            box-shadow: 0 0 80px rgba(239,68,68,0.2), inset 0 0 40px rgba(239,68,68,0.05);
+            animation: nuclear-pulse 1.5s ease infinite;
+        }
+        @keyframes nuclear-pulse {
+            0%, 100% { box-shadow: 0 0 60px rgba(239,68,68,0.15), inset 0 0 30px rgba(239,68,68,0.05); }
+            50% { box-shadow: 0 0 100px rgba(239,68,68,0.3), inset 0 0 50px rgba(239,68,68,0.1); }
+        }
+        .nuclear-card h2 {
+            font-family: var(--mono);
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--red);
+            margin-bottom: 12px;
+        }
+        .nuclear-card p {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+
+        /* VTC quality indicator */
+        .vtc-quality {
+            position: absolute;
+            bottom: 4px;
+            right: 6px;
+            font-family: var(--mono);
+            font-size: 0.45rem;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: rgba(0,0,0,0.5);
+            color: var(--green);
+        }
+        .vtc-quality.degraded { color: var(--amber); }
+        .vtc-quality.audio-only { color: var(--red); }
+
         /* --- v9.7 Emergency Protocol Overlays --- */
         .protocol-overlay {
             position: fixed;
@@ -884,9 +945,21 @@
     </div>
 </div>
 
+<!-- v12.1 Nuclear Protocol (Session Hijack) -->
+<div class="protocol-overlay nuclear" id="nuclearOverlay">
+    <div class="nuclear-card">
+        <h2>Session Compromised</h2>
+        <p id="nuclearReason">A security anomaly has been detected. Your session has been frozen for protection. Contact your supervisor.</p>
+    </div>
+</div>
+
 <header class="journey-header">
     <div class="journey-logo">RoTEM<span>:</span>MOXO</div>
     <div class="header-right">
+        <div class="security-badge" title="End-to-end encrypted session">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            E2EE
+        </div>
         <div class="journey-token-badge" id="tokenBadge">SESSION</div>
         <div class="connection-dot" title="Connected"></div>
     </div>
@@ -916,6 +989,7 @@
                     <div class="rtc-placeholder" id="rtcLocalPlaceholder">Camera off</div>
                     <div class="rtc-frame-label">You</div>
                     <div class="rtc-clock-overlay" id="rtcClockOverlay">3:00</div>
+                    <div class="vtc-quality" id="vtcQuality">HD</div>
                 </div>
             </div>
 
@@ -1739,6 +1813,82 @@
             enforceAudioMute(true);
         }
     };
+
+    // v12.1 — VTC Quality Monitor (Dynamic Throttling)
+    var vtcQualityEl = document.getElementById('vtcQuality');
+    var videoTrackEnabled = true;
+
+    function monitorVTCQuality() {
+        if (!peerConnection) return;
+        peerConnection.getStats(null).then(function (stats) {
+            stats.forEach(function (report) {
+                if (report.type === 'outbound-rtp' && report.kind === 'video') {
+                    var packetsSent = report.packetsSent || 0;
+                    var packetsLost = report.packetsLost || 0;
+                    if (packetsSent > 0) {
+                        var lossRate = packetsLost / (packetsSent + packetsLost);
+                        if (lossRate > 0.05 && videoTrackEnabled) {
+                            // Auto-downgrade: disable video to preserve audio
+                            var videoTracks = localStream ? localStream.getVideoTracks() : [];
+                            for (var i = 0; i < videoTracks.length; i++) {
+                                videoTracks[i].enabled = false;
+                            }
+                            videoTrackEnabled = false;
+                            if (vtcQualityEl) {
+                                vtcQualityEl.textContent = 'Audio Only';
+                                vtcQualityEl.className = 'vtc-quality audio-only';
+                            }
+                        } else if (lossRate <= 0.02 && !videoTrackEnabled) {
+                            // Re-enable video when quality improves
+                            var videoTracks2 = localStream ? localStream.getVideoTracks() : [];
+                            for (var j = 0; j < videoTracks2.length; j++) {
+                                videoTracks2[j].enabled = true;
+                            }
+                            videoTrackEnabled = true;
+                            if (vtcQualityEl) {
+                                vtcQualityEl.textContent = 'HD';
+                                vtcQualityEl.className = 'vtc-quality';
+                            }
+                        } else if (lossRate > 0.02 && lossRate <= 0.05) {
+                            if (vtcQualityEl) {
+                                vtcQualityEl.textContent = 'SD';
+                                vtcQualityEl.className = 'vtc-quality degraded';
+                            }
+                        }
+                    }
+                }
+            });
+        }).catch(function () {});
+    }
+
+    // Poll connection stats every 3 seconds
+    setInterval(monitorVTCQuality, 3000);
+
+    // v12.1 — NUCLEAR_PROTOCOL SSE listener
+    if (eventSource) {
+        eventSource.addEventListener('NUCLEAR_PROTOCOL', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.studentId && data.studentId !== token) return;
+                var overlay = document.getElementById('nuclearOverlay');
+                var reasonEl = document.getElementById('nuclearReason');
+                if (reasonEl && data.reason) reasonEl.textContent = data.reason;
+                if (overlay) overlay.classList.add('active');
+                // Freeze everything
+                if (video && !video.paused) video.pause();
+                enforceAudioMute(true);
+                // Disable video tracks
+                if (localStream) {
+                    localStream.getTracks().forEach(function (t) { t.enabled = false; });
+                }
+                // Close peer connection
+                if (peerConnection) {
+                    try { peerConnection.close(); } catch (e2) {}
+                    peerConnection = null;
+                }
+            } catch (err) {}
+        });
+    }
 
     // Auto-init camera on page load
     initLocalMedia();

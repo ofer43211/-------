@@ -32,6 +32,53 @@ KNOWLEDGE_BASE_PATH = BASE_DIR / "rotem_knowledge_base.json"
 _sse_clients = []  # list of (queue, token_filter)
 _sse_lock = threading.Lock()
 
+# --- v12.1 Rate Limiter ---
+_rate_limit_lock = threading.Lock()
+_rate_limit_store = {}  # ip -> [timestamps]
+RATE_LIMIT_WINDOW = 10  # seconds
+RATE_LIMIT_MAX = 50     # max requests per window per IP
+
+
+def check_rate_limit(ip):
+    """Return True if request is allowed, False if rate-limited."""
+    now = time.time()
+    with _rate_limit_lock:
+        if ip not in _rate_limit_store:
+            _rate_limit_store[ip] = []
+        timestamps = _rate_limit_store[ip]
+        # Prune old entries
+        _rate_limit_store[ip] = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
+        if len(_rate_limit_store[ip]) >= RATE_LIMIT_MAX:
+            return False
+        _rate_limit_store[ip].append(now)
+        return True
+
+
+# --- v12.1 Session Fingerprint Registry ---
+_session_fingerprints = {}  # token -> {"ip": str, "ua_hash": str}
+
+
+def bind_session_fingerprint(token, ip, ua):
+    """Bind a token to an IP+UA fingerprint on first use."""
+    import hashlib
+    ua_hash = hashlib.sha256(ua.encode()).hexdigest()[:16]
+    if token not in _session_fingerprints:
+        _session_fingerprints[token] = {"ip": ip, "ua_hash": ua_hash}
+    return _session_fingerprints[token]
+
+
+def verify_session_fingerprint(token, ip, ua):
+    """Verify request fingerprint matches bound session. Returns (ok, reason)."""
+    import hashlib
+    if token not in _session_fingerprints:
+        return True, "unbound"  # Not yet bound, allow
+    bound = _session_fingerprints[token]
+    ua_hash = hashlib.sha256(ua.encode()).hexdigest()[:16]
+    if bound["ip"] != ip or bound["ua_hash"] != ua_hash:
+        return False, "fingerprint_mismatch"
+    return True, "verified"
+
+
 # --- Token / Auth Store ---
 
 _auth_lock = threading.Lock()
@@ -405,7 +452,49 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(BASE_DIR), **kwargs)
 
+    def _get_client_ip(self):
+        """Get client IP, respecting X-Forwarded-For for proxied requests."""
+        return self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
+
+    def _check_rate_limit(self):
+        """Check rate limit. Returns True if allowed."""
+        ip = self._get_client_ip()
+        if not check_rate_limit(ip):
+            self._json_error(429, "rate_limited", "Too many requests. Slow down.")
+            return False
+        return True
+
+    def _verify_token_fingerprint(self, token):
+        """Verify session fingerprint for critical routes. Triggers NUCLEAR on mismatch."""
+        if not token:
+            return True
+        ip = self._get_client_ip()
+        ua = self.headers.get("User-Agent", "unknown")
+
+        # Bind on first encounter
+        bind_session_fingerprint(token, ip, ua)
+
+        ok, reason = verify_session_fingerprint(token, ip, ua)
+        if not ok:
+            # NUCLEAR: Hijack detected
+            sse_broadcast("NUCLEAR_PROTOCOL", {
+                "studentId": token,
+                "reason": "Session fingerprint mismatch — possible hijack detected.",
+                "triggered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            }, token_filter=token)
+            sse_broadcast("HARD_CLEAR", {
+                "type": "hard_clear",
+                "triggered_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "triggered_by": "hijack_protocol",
+                "bandwidth_reset": False,
+            }, token_filter=token)
+            self._json_error(403, "session_hijack", "Fingerprint mismatch. Session frozen.")
+            return False
+        return True
+
     def do_GET(self):
+        if not self._check_rate_limit():
+            return
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/")
 
@@ -472,6 +561,8 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        if not self._check_rate_limit():
+            return
         parsed = urllib.parse.urlparse(self.path)
 
         if parsed.path == "/api/contact":
@@ -907,6 +998,11 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         tok = data.get("token", "")
+
+        # v12.1: Verify session fingerprint
+        if not self._verify_token_fingerprint(tok):
+            return
+
         is_voice_active = data.get("isVoiceActive", False)
         state, scores = analyze_cognitive_state(data)
 
@@ -1043,6 +1139,10 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         sender_id = data.get("sender_id", "")
         target_id = data.get("target_id", "")
         signal_data = data.get("data", {})
+
+        # v12.1: Verify session fingerprint
+        if not self._verify_token_fingerprint(sender_id):
+            return
 
         # Map route to SSE event type
         event_map = {
