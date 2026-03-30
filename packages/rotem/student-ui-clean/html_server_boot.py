@@ -456,8 +456,17 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         """Get client IP, respecting X-Forwarded-For for proxied requests."""
         return self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0].strip()
 
+    # Routes exempt from rate limiting (internal ops only)
+    _RATE_LIMIT_EXEMPT_PREFIXES = ("/ops/", "/health")
+
     def _check_rate_limit(self):
-        """Check rate limit. Returns True if allowed."""
+        """Check rate limit. Returns True if allowed.
+        v12.6: Loopback Armor — no exemption for 127.0.0.1 on API routes.
+        Only internal operational routes (/ops/*, /health) are exempt."""
+        parsed_path = urllib.parse.urlparse(self.path).path.rstrip("/")
+        for prefix in self._RATE_LIMIT_EXEMPT_PREFIXES:
+            if parsed_path == prefix.rstrip("/") or parsed_path.startswith(prefix):
+                return True
         ip = self._get_client_ip()
         if not check_rate_limit(ip):
             self._json_error(429, "rate_limited", "Too many requests. Slow down.")
