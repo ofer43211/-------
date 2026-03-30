@@ -161,10 +161,70 @@ def commit_insight(token, content, video_timestamp=0, lineage_id=None):
             "lineage_id": lineage_id,
             "status": "pending",
             "committed_at": now,
+            "investors": [],  # v10.0: Swarm Investor ledger
         }
         kb.setdefault("insights", []).append(insight)
         _save_knowledge_base(kb)
+
+        # v10.0: Broadcast to all students (except creator) for Swarm Feed
+        sse_broadcast("INSIGHT_COMMITTED", {
+            "insight_id": insight_id,
+            "student_id": token,
+            "content": content[:120],  # Truncate for feed preview
+            "video_timestamp": video_timestamp,
+        })
+
         return insight_id
+
+
+def invest_in_insight(investor_token, insight_id, amount_ms=None):
+    """Invest bandwidth in a peer's pending insight.
+
+    Deducts amount_ms from investor, adds them to insight's investor list.
+    Returns (ok: bool, info: dict).
+    """
+    if amount_ms is None:
+        amount_ms = INVEST_AMOUNT_MS
+
+    # Check investor has enough bandwidth
+    if investor_token not in _student_bandwidth:
+        _student_bandwidth[investor_token] = {
+            "bandwidth_ms": DEFAULT_BANDWIDTH_MS,
+            "is_overtime": False,
+        }
+    bw = _student_bandwidth[investor_token]
+
+    with _knowledge_lock:
+        kb = _load_knowledge_base()
+        target = None
+        for ins in kb.get("insights", []):
+            if ins["id"] == insight_id:
+                target = ins
+                break
+
+        if not target:
+            return False, {"error": "insight_not_found"}
+        if target["status"] != "pending":
+            return False, {"error": "insight_already_merged"}
+        if target["student_id"] == investor_token:
+            return False, {"error": "cannot_invest_in_own"}
+        if investor_token in target.get("investors", []):
+            return False, {"error": "already_invested"}
+
+        # Deduct bandwidth (allow going negative — Shadow Mode)
+        bw["bandwidth_ms"] -= amount_ms
+        if bw["bandwidth_ms"] <= 0:
+            bw["is_overtime"] = True
+
+        # Record investment
+        target.setdefault("investors", []).append(investor_token)
+        _save_knowledge_base(kb)
+
+    return True, {
+        "insight_id": insight_id,
+        "invested_ms": amount_ms,
+        "new_bandwidth_ms": bw["bandwidth_ms"],
+    }
 
 
 def merge_insight(insight_id):
@@ -206,6 +266,8 @@ AMBIGUITY_THRESHOLD = 0.5
 DEFAULT_BANDWIDTH_MS = 180_000  # 3 minutes
 BANDWIDTH_BONUS_MS = 60_000    # +1 minute on merge
 BANDWIDTH_DECREMENT_MS = 10_000  # per 10s telemetry tick when voice active
+INVEST_AMOUNT_MS = 30_000       # v10.0: cost to invest in a peer insight
+INVESTOR_ROI_MS = 90_000        # v10.0: ROI payout per investor on merge
 _student_bandwidth = {}  # token -> {"bandwidth_ms": int, "is_overtime": bool}
 
 
@@ -435,6 +497,11 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/knowledge/merge":
             self._handle_knowledge_merge()
+            return
+
+        # v10.0 — Swarm Investor
+        if parsed.path == "/api/knowledge/invest":
+            self._handle_knowledge_invest()
             return
 
         # v7.0 — Sensor Fusion
@@ -693,10 +760,15 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._json_error(404, "not_found", "Insight not found or already merged")
             return
 
-        # v8.0: Award bandwidth bonus to the student
+        # v8.0: Award bandwidth bonus to the creator
         student_tok = merged.get("student_id", "")
         bonus_awarded = 0
-        if student_tok and student_tok in _student_bandwidth:
+        if student_tok:
+            if student_tok not in _student_bandwidth:
+                _student_bandwidth[student_tok] = {
+                    "bandwidth_ms": DEFAULT_BANDWIDTH_MS,
+                    "is_overtime": False,
+                }
             bw = _student_bandwidth[student_tok]
             bw["bandwidth_ms"] += BANDWIDTH_BONUS_MS
             if bw["bandwidth_ms"] > 0:
@@ -709,14 +781,44 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
                 "bonus_ms": bonus_awarded,
             })
 
-        # Broadcast Gold Flash to the student who committed it
+        # v10.0: ROI payout to all investors
+        investors = merged.get("investors", [])
+        for inv_tok in investors:
+            if inv_tok not in _student_bandwidth:
+                _student_bandwidth[inv_tok] = {
+                    "bandwidth_ms": DEFAULT_BANDWIDTH_MS,
+                    "is_overtime": False,
+                }
+            inv_bw = _student_bandwidth[inv_tok]
+            inv_bw["bandwidth_ms"] += INVESTOR_ROI_MS
+            if inv_bw["bandwidth_ms"] > 0:
+                inv_bw["is_overtime"] = False
+            sse_broadcast("BANDWIDTH_UPDATE", {
+                "token": inv_tok,
+                "bandwidth_ms": inv_bw["bandwidth_ms"],
+                "is_overtime": inv_bw["is_overtime"],
+                "bonus_ms": INVESTOR_ROI_MS,
+            })
+            sse_broadcast("INSIGHT_MERGED", {
+                "insight_id": merged["id"],
+                "message": "Investment ROI! Insight you backed was merged.",
+                "bandwidth_bonus_ms": INVESTOR_ROI_MS,
+                "is_roi": True,
+            }, token_filter=inv_tok)
+
+        # Broadcast Gold Flash to the creator
         sse_broadcast("INSIGHT_MERGED", {
             "insight_id": merged["id"],
             "message": "Clinical Insight Verified & Merged into RoTEM Base.",
             "bandwidth_bonus_ms": bonus_awarded,
+            "investor_count": len(investors),
         }, token_filter=student_tok)
 
-        response = json.dumps({"status": "ok", "merged": merged})
+        response = json.dumps({
+            "status": "ok",
+            "merged": merged,
+            "investors_paid": len(investors),
+        })
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(response)))
@@ -736,6 +838,50 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body.encode("utf-8"))
+
+    def _handle_knowledge_invest(self):
+        """POST /api/knowledge/invest — Student invests bandwidth in a peer insight.
+
+        Body: {"token": "MOXO-XX", "insight_id": "INS-XXXXXXXX", "amount_ms": 30000}
+        Deducts from investor's bandwidth. On merge, investor gets ROI.
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        tok = data.get("token", "").strip()
+        insight_id = data.get("insight_id", "").strip()
+        amount = data.get("amount_ms", INVEST_AMOUNT_MS)
+
+        if not tok or not insight_id:
+            self._json_error(400, "missing_fields", "token and insight_id required")
+            return
+
+        ok, info = invest_in_insight(tok, insight_id, amount)
+        if not ok:
+            self._json_error(400, info.get("error", "invest_failed"), str(info))
+            return
+
+        # Broadcast updated bandwidth to the investor
+        bw = _student_bandwidth.get(tok, {})
+        sse_broadcast("BANDWIDTH_UPDATE", {
+            "token": tok,
+            "bandwidth_ms": bw.get("bandwidth_ms", 0),
+            "is_overtime": bw.get("is_overtime", False),
+            "invested_ms": amount,
+        }, token_filter=tok)
+
+        response = json.dumps({"status": "ok", **info})
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
 
     def _handle_sensor_fusion(self):
         """POST /api/telemetry/sensor-fusion — Process multimodal sensor input.

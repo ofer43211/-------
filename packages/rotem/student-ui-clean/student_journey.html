@@ -391,6 +391,93 @@
         }
         .gate-item.done { color: var(--text-dim); }
 
+        /* --- v10.0 Swarm Investment Feed --- */
+        .swarm-panel {
+            border-top: 1px solid var(--obsidian-border);
+            padding: 10px 16px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .swarm-title {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .swarm-roi-badge {
+            font-size: 0.55rem;
+            background: rgba(16,185,129,0.15);
+            color: var(--green);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .swarm-card {
+            background: var(--obsidian-card);
+            border: 1px solid var(--obsidian-border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+            animation: swarm-slide-in 0.4s ease-out;
+        }
+        .swarm-card:hover { border-color: rgba(0,240,255,0.25); }
+        @keyframes swarm-slide-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .swarm-card-source {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-family: var(--mono);
+        }
+        .swarm-card-content {
+            font-size: 0.78rem;
+            line-height: 1.4;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+        .swarm-invest-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid rgba(0,240,255,0.25);
+            color: var(--cyan);
+            padding: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+        .swarm-invest-btn:hover:not(:disabled) {
+            background: var(--cyan);
+            color: var(--obsidian);
+            box-shadow: 0 0 12px rgba(0,240,255,0.3);
+        }
+        .swarm-invest-btn:disabled {
+            opacity: 0.5;
+            border-color: var(--obsidian-border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+        .swarm-empty {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 12px 0;
+        }
+
         /* --- Gold Energy Flash (Insight Merged) --- */
         @keyframes gold-flash-ring {
             0% { box-shadow: 0 0 0 0 rgba(255,215,0,0.6), inset 0 0 20px rgba(255,215,0,0.3); }
@@ -779,6 +866,17 @@
             </button>
         </div>
 
+        <!-- v10.0 Swarm Investment Feed -->
+        <div class="swarm-panel" id="swarmPanel">
+            <div class="swarm-title">
+                <span>Swarm Investments</span>
+                <span class="swarm-roi-badge">ROI x3</span>
+            </div>
+            <div id="swarmFeed">
+                <div class="swarm-empty">No peer insights yet. Commit your own!</div>
+            </div>
+        </div>
+
         <!-- Gates Progress -->
         <div class="gates-panel">
             <div class="gates-title">Assessment Gates</div>
@@ -1078,6 +1176,16 @@
             } catch (err) {}
         });
 
+        // v10.0 — Swarm Investor Feed
+        eventSource.addEventListener('INSIGHT_COMMITTED', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                // Don't show the student's own insights
+                if (data.student_id === token) return;
+                addSwarmCard(data);
+            } catch (err) {}
+        });
+
         // v9.7 — Emergency Protocol SSE listeners
         eventSource.addEventListener('INTERVENTION_TRIGGERED', function (e) {
             try {
@@ -1232,6 +1340,88 @@
             body: JSON.stringify(telemetry)
         }).catch(function () { /* silent */ });
     }, 10000);
+
+    // --- v10.0 Swarm Investment Feed ---
+    var swarmFeed = document.getElementById('swarmFeed');
+    var swarmHasCards = false;
+
+    function addSwarmCard(data) {
+        // Clear empty message on first card
+        if (!swarmHasCards) {
+            swarmFeed.innerHTML = '';
+            swarmHasCards = true;
+        }
+
+        var card = document.createElement('div');
+        card.className = 'swarm-card';
+        card.dataset.insightId = data.insight_id;
+
+        var source = document.createElement('div');
+        source.className = 'swarm-card-source';
+        source.textContent = data.student_id || 'Peer';
+
+        var content = document.createElement('div');
+        content.className = 'swarm-card-content';
+        content.textContent = '"' + (data.content || '...') + '"';
+
+        var btn = document.createElement('button');
+        btn.className = 'swarm-invest-btn';
+        btn.innerHTML = 'Invest 30s &#x1F48E;';
+        btn.addEventListener('click', function () {
+            investInInsight(data.insight_id, btn);
+        });
+
+        card.appendChild(source);
+        card.appendChild(content);
+        card.appendChild(btn);
+        swarmFeed.insertBefore(card, swarmFeed.firstChild);
+
+        // Keep feed to 10 cards max
+        while (swarmFeed.children.length > 10) {
+            swarmFeed.removeChild(swarmFeed.lastChild);
+        }
+    }
+
+    function investInInsight(insightId, btn) {
+        btn.disabled = true;
+        btn.textContent = 'Investing...';
+
+        fetch('/api/knowledge/invest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: token,
+                insight_id: insightId,
+                amount_ms: 30000
+            })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.status === 'ok') {
+                btn.textContent = 'Invested!';
+                btn.style.borderColor = 'rgba(255,215,0,0.4)';
+                btn.style.color = '#FFD700';
+                // Subtle clock shrink animation
+                if (bandwidthClock) {
+                    bandwidthClock.style.transform = 'scale(0.9)';
+                    setTimeout(function () { bandwidthClock.style.transform = ''; }, 200);
+                }
+            } else {
+                btn.textContent = data.error || 'Failed';
+                setTimeout(function () {
+                    btn.textContent = 'Invest 30s';
+                    btn.disabled = false;
+                }, 2000);
+            }
+        })
+        .catch(function () {
+            btn.textContent = 'Offline';
+            setTimeout(function () {
+                btn.textContent = 'Invest 30s';
+                btn.disabled = false;
+            }, 2000);
+        });
+    }
 
     // --- Intervention Acknowledge ---
     var interventionAckBtn = document.getElementById('interventionAckBtn');
