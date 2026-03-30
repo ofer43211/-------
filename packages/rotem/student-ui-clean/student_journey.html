@@ -6,157 +6,112 @@
     <title>RoTEM Academy | MOXO Assessment Journey</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --primary: #1a56db;
-            --accent: #10b981;
-            --dark: #0f172a;
-            --text: #334155;
-            --text-light: #64748b;
-            --bg: #f8fafc;
+            --obsidian: #0a0e1a;
+            --obsidian-light: #111827;
+            --obsidian-card: #151c2c;
+            --obsidian-border: #1e293b;
+            --cyan: #00f0ff;
+            --cyan-dim: rgba(0,240,255,0.15);
+            --cyan-glow: rgba(0,240,255,0.3);
+            --amber: #f59e0b;
+            --amber-dim: rgba(245,158,11,0.15);
+            --green: #10b981;
+            --green-dim: rgba(16,185,129,0.15);
+            --red: #ef4444;
+            --red-dim: rgba(239,68,68,0.15);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --text-muted: #475569;
             --font: 'Inter', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
         }
+
         body {
             font-family: var(--font);
-            background: var(--bg);
+            background: var(--obsidian);
             color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
+
+        /* --- Header --- */
         .journey-header {
-            background: var(--dark);
-            color: #fff;
-            padding: 16px 24px;
+            background: var(--obsidian-light);
+            border-bottom: 1px solid var(--obsidian-border);
+            padding: 12px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
         .journey-logo {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-        .journey-logo span { color: var(--primary); }
-        .journey-token-badge {
-            font-size: 0.75rem;
+            font-family: var(--mono);
+            font-size: 1rem;
             font-weight: 600;
-            background: rgba(26,86,219,0.2);
-            border: 1px solid rgba(26,86,219,0.4);
-            border-radius: 100px;
-            padding: 4px 12px;
-            color: #93bbfd;
+            color: var(--text);
+            letter-spacing: 0.02em;
         }
-        .journey-main {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 24px;
-        }
-        .journey-card {
-            max-width: 600px;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            padding: 48px 40px;
-            text-align: center;
-        }
-        .journey-card h1 {
-            font-size: 1.6rem;
-            color: var(--dark);
-            margin-bottom: 12px;
-        }
-        .journey-card p {
-            color: var(--text-light);
-            line-height: 1.7;
-            margin-bottom: 24px;
-        }
-        .journey-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(16,185,129,0.1);
-            border: 1px solid rgba(16,185,129,0.3);
-            border-radius: 8px;
-            padding: 10px 20px;
-            font-weight: 600;
-            color: #059669;
-            font-size: 0.9rem;
-        }
-        .journey-status::before {
-            content: '';
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #10b981;
-            animation: blink 1.5s ease infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        .journey-progress {
-            margin-top: 32px;
-            text-align: left;
-        }
-        .journey-progress h3 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-light);
-            margin-bottom: 16px;
-        }
-        .gate-list { list-style: none; }
-        .gate-item {
+        .journey-logo span { color: var(--cyan); }
+        .header-right {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 10px 0;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 0.9rem;
         }
-        .gate-dot {
-            width: 24px;
-            height: 24px;
+        .journey-token-badge {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.25);
+            border-radius: 100px;
+            padding: 4px 12px;
+            color: var(--cyan);
+        }
+        .connection-dot {
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            border: 2px solid #e2e8f0;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse-dot 2s ease infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 4px var(--green); }
+            50% { box-shadow: 0 0 12px var(--green); }
+        }
+
+        /* --- Main Layout --- */
+        .journey-main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 0;
+            min-height: 0;
+        }
+
+        /* --- Video Panel (Left) --- */
+        .video-panel {
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            position: relative;
+        }
+        .video-wrap {
+            flex: 1;
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.7rem;
-            color: var(--text-light);
-            flex-shrink: 0;
-        }
-        .gate-item.current .gate-dot {
-            border-color: var(--primary);
-            background: var(--primary);
-            color: #fff;
-        }
-
-        /* Video Player */
-        .video-section {
-            margin-top: 32px;
-            text-align: left;
-        }
-        .video-section h3 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-light);
-            margin-bottom: 12px;
-        }
-        .video-wrap {
-            position: relative;
-            border-radius: 12px;
             overflow: hidden;
-            background: #000;
-            aspect-ratio: 16/9;
         }
         .video-wrap video {
             width: 100%;
             height: 100%;
+            object-fit: contain;
             display: block;
         }
         .video-overlay {
@@ -165,83 +120,368 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             cursor: pointer;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s ease;
+            z-index: 2;
         }
         .video-overlay.hidden { opacity: 0; pointer-events: none; }
         .video-play-btn {
-            width: 64px;
-            height: 64px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
-            background: var(--primary);
-            border: none;
+            background: rgba(0,240,255,0.15);
+            border: 2px solid var(--cyan);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 12px rgba(26,86,219,0.4);
-            transition: transform 0.2s ease;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 30px rgba(0,240,255,0.2);
         }
-        .video-play-btn:hover { transform: scale(1.1); }
+        .video-play-btn:hover {
+            background: rgba(0,240,255,0.25);
+            transform: scale(1.1);
+            box-shadow: 0 0 40px rgba(0,240,255,0.35);
+        }
         .video-play-btn svg { margin-left: 4px; }
+
+        /* HUD overlay on video */
+        .video-hud {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            z-index: 1;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        .hud-progress {
+            flex: 1;
+            margin-right: 16px;
+        }
+        .hud-progress-label {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+        .hud-progress-bar {
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .hud-progress-fill {
+            height: 100%;
+            width: 25%;
+            background: linear-gradient(90deg, var(--cyan), #34d399);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .hud-gate {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--amber);
+            white-space: nowrap;
+        }
         .video-error {
-            color: #ef4444;
-            font-size: 0.85rem;
-            margin-top: 8px;
+            color: var(--red);
+            font-size: 0.8rem;
+            padding: 8px 20px;
+            background: var(--red-dim);
             display: none;
+        }
+
+        /* --- Sidebar Panel (Right) --- */
+        .sidebar-panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--obsidian-light);
+            border-left: 1px solid var(--obsidian-border);
+            overflow: hidden;
+        }
+
+        /* Nitzutz Chat Area */
+        .nitzutz-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--obsidian-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nitzutz-title {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nitzutz-title::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan);
+        }
+        .nitzutz-chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-bubble {
+            max-width: 90%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            line-height: 1.55;
+        }
+        .chat-bubble.nitzutz {
+            background: var(--obsidian-card);
+            border: 1px solid var(--obsidian-border);
+            color: var(--text);
+            align-self: flex-start;
+            border-top-left-radius: 4px;
+        }
+        .chat-bubble.student {
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.2);
+            color: var(--cyan);
+            align-self: flex-end;
+            border-top-right-radius: 4px;
+        }
+
+        /* Chat Input */
+        .chat-input-area {
+            padding: 12px 16px;
+            border-top: 1px solid var(--obsidian-border);
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1;
+            background: var(--obsidian-card);
+            border: 1px solid var(--obsidian-border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.85rem;
+            resize: none;
+            min-height: 40px;
+            max-height: 100px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .chat-input:focus { border-color: var(--cyan); }
+        .chat-input::placeholder { color: var(--text-muted); }
+        .chat-send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.25);
+            color: var(--cyan);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .chat-send-btn:hover {
+            background: rgba(0,240,255,0.25);
+            box-shadow: 0 0 12px rgba(0,240,255,0.2);
+        }
+
+        /* --- Rescue Button --- */
+        .rescue-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--amber-dim);
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: var(--amber);
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .rescue-btn:hover {
+            background: rgba(245,158,11,0.25);
+            box-shadow: 0 0 12px rgba(245,158,11,0.2);
+        }
+        .rescue-btn.active {
+            background: rgba(245,158,11,0.3);
+            animation: rescue-pulse 1s ease;
+        }
+        @keyframes rescue-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+            100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+        }
+
+        /* --- Gates Panel (bottom of sidebar) --- */
+        .gates-panel {
+            border-top: 1px solid var(--obsidian-border);
+            padding: 14px 16px;
+        }
+        .gates-title {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+        .gate-list { list-style: none; }
+        .gate-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        .gate-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--obsidian-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        .gate-item.current .gate-dot {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+            color: var(--cyan);
+            box-shadow: 0 0 8px rgba(0,240,255,0.2);
+        }
+        .gate-item.current { color: var(--text); }
+        .gate-item.done .gate-dot {
+            border-color: var(--green);
+            background: var(--green-dim);
+            color: var(--green);
+        }
+        .gate-item.done { color: var(--text-dim); }
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            .journey-main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 50vh 1fr;
+            }
+            .sidebar-panel { border-left: none; border-top: 1px solid var(--obsidian-border); }
         }
     </style>
 </head>
 <body>
 
 <header class="journey-header">
-    <div class="journey-logo">RoTEM<span>Academy</span></div>
-    <div class="journey-token-badge" id="tokenBadge">MOXO Session</div>
+    <div class="journey-logo">RoTEM<span>:</span>MOXO</div>
+    <div class="header-right">
+        <div class="journey-token-badge" id="tokenBadge">SESSION</div>
+        <div class="connection-dot" title="Connected"></div>
+    </div>
 </header>
 
 <main class="journey-main">
-    <div class="journey-card">
-        <h1>MOXO Assessment Journey</h1>
-        <p>
-            Welcome to your personalised MOXO assessment pathway.
-            Your session is secured and monitored by our clinical team.
-        </p>
-        <div class="journey-status">Session Active &mdash; Connected</div>
-
-        <!-- Video Player -->
-        <div class="video-section" id="videoSection">
-            <h3>Lesson Video</h3>
-            <div class="video-wrap">
-                <video id="journeyVideo" preload="metadata" crossorigin="anonymous"
-                       playsinline controlsList="nodownload">
-                    <!-- src set dynamically by interceptor -->
-                </video>
-                <div class="video-overlay" id="videoOverlay">
-                    <button class="video-play-btn" id="videoPlayBtn" aria-label="Play video">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    </button>
-                </div>
+    <!-- Left: Video Panel -->
+    <div class="video-panel">
+        <div class="video-wrap">
+            <video id="journeyVideo" preload="metadata" crossorigin="anonymous"
+                   playsinline controlsList="nodownload">
+            </video>
+            <div class="video-overlay" id="videoOverlay">
+                <button class="video-play-btn" id="videoPlayBtn" aria-label="Play video">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--cyan)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
             </div>
-            <p class="video-error" id="videoError">Video could not be loaded. Please refresh or contact support.</p>
+            <!-- HUD Overlay -->
+            <div class="video-hud">
+                <div class="hud-progress">
+                    <div class="hud-progress-label">Learning Energy</div>
+                    <div class="hud-progress-bar">
+                        <div class="hud-progress-fill" id="hudProgressFill"></div>
+                    </div>
+                </div>
+                <div class="hud-gate" id="hudGate">Gate 1/4</div>
+            </div>
+        </div>
+        <p class="video-error" id="videoError">Video could not be loaded. Please refresh or contact support.</p>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div class="sidebar-panel">
+        <!-- Nitzutz Header + Rescue Button -->
+        <div class="nitzutz-header">
+            <div class="nitzutz-title">Nitzutz AI</div>
+            <button class="rescue-btn" id="rescueBtn" title="Reset context — tell Nitzutz to change perspective">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                Reset Focus
+            </button>
         </div>
 
-        <div class="journey-progress">
-            <h3>Assessment Gates</h3>
+        <!-- Chat Messages -->
+        <div class="nitzutz-chat" id="nitzutzChat">
+            <div class="chat-bubble nitzutz">
+                Welcome to your MOXO assessment journey. I'm Nitzutz, your AI clinical guide.
+                Watch the video segment and share what you observe &mdash; I'll help sharpen your analysis.
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area">
+            <textarea class="chat-input" id="chatInput" rows="1"
+                      placeholder="Type your observation..."></textarea>
+            <button class="chat-send-btn" id="chatSendBtn" aria-label="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+        </div>
+
+        <!-- Gates Progress -->
+        <div class="gates-panel">
+            <div class="gates-title">Assessment Gates</div>
             <ul class="gate-list">
-                <li class="gate-item current">
+                <li class="gate-item current" data-gate="1">
                     <div class="gate-dot">1</div>
                     <span>Orientation &amp; Consent</span>
                 </li>
-                <li class="gate-item">
+                <li class="gate-item" data-gate="2">
                     <div class="gate-dot">2</div>
-                    <span>Hormonal Response Identification</span>
+                    <span>Hormonal Response</span>
                 </li>
-                <li class="gate-item">
+                <li class="gate-item" data-gate="3">
                     <div class="gate-dot">3</div>
-                    <span>MOXO Continuous Performance Test</span>
+                    <span>MOXO Performance Test</span>
                 </li>
-                <li class="gate-item">
+                <li class="gate-item" data-gate="4">
                     <div class="gate-dot">4</div>
                     <span>AI Analysis &amp; Feedback</span>
                 </li>
@@ -252,114 +492,139 @@
 
 <script>
 (function () {
+    'use strict';
+
     var params = new URLSearchParams(window.location.search);
     var token = params.get('token');
     var badge = document.getElementById('tokenBadge');
-    if (token && badge) {
-        badge.textContent = token;
+    if (token && badge) badge.textContent = token;
+
+    // --- R2 CDN Media ---
+    var R2_BASE = 'https://pub-59bba3fd2d1946dd8a44c75f41803059.r2.dev';
+
+    function normaliseMediaUrl(raw) {
+        if (!raw) return raw;
+        var s = raw.trim();
+        if (/^https?:\/\//i.test(s) && !/127\.0\.0\.1|localhost/i.test(s)) return s;
+        var localMatch = s.match(/^https?:\/\/(?:127\.0\.0\.1|localhost)(?::(\d+))?(\/.*)/i);
+        if (localMatch) return R2_BASE + localMatch[2];
+        if (s.charAt(0) === '/') return R2_BASE + s;
+        return s;
     }
 
-    // --- Video URL Interceptor (v1.9-FORCE-MEDIA-FIX) ---
-    // Strips localhost/127.0.0.1 from any video URL and routes through proxy.
+    // --- Video ---
     var video = document.getElementById('journeyVideo');
     var overlay = document.getElementById('videoOverlay');
     var playBtn = document.getElementById('videoPlayBtn');
     var errorEl = document.getElementById('videoError');
 
-    // R2 CDN base URL for media files
-    var R2_BASE = 'https://pub-59bba3fd2d1946dd8a44c75f41803059.r2.dev';
-
-    /**
-     * Normalise a media URL:
-     * - http://127.0.0.1:9999/quarry/video.mp4 → R2_BASE/quarry/video.mp4
-     * - http://localhost:9999/media/clip.mp4   → R2_BASE/media/clip.mp4
-     * - /quarry/video.mp4                      → R2_BASE/quarry/video.mp4
-     * - /media/clip.mp4                        → R2_BASE/media/clip.mp4
-     * - Already full https://...               → unchanged
-     */
-    function normaliseMediaUrl(raw) {
-        if (!raw) return raw;
-        var s = raw.trim();
-
-        // Already a full external URL (not localhost) — leave as is
-        if (/^https?:\/\//i.test(s) && !/127\.0\.0\.1|localhost/i.test(s)) {
-            return s;
-        }
-
-        // Strip absolute localhost URLs → extract path
-        var localMatch = s.match(
-            /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::(\d+))?(\/.*)/i
-        );
-        if (localMatch) {
-            return R2_BASE + localMatch[2];
-        }
-
-        // Bare path like /quarry/... or /media/... → route to R2
-        if (s.charAt(0) === '/') {
-            return R2_BASE + s;
-        }
-
-        return s;
-    }
-
-    /**
-     * Load video from a URL (called by blueprint data or fallback).
-     */
     function loadVideo(rawUrl) {
         if (!video || !rawUrl) return;
-        var url = normaliseMediaUrl(rawUrl);
-        video.src = url;
+        video.src = normaliseMediaUrl(rawUrl);
         video.load();
     }
 
-    // Error handling — show message if video fails
     if (video) {
-        video.addEventListener('error', function () {
-            if (errorEl) errorEl.style.display = 'block';
-        });
-
-        video.addEventListener('loadedmetadata', function () {
-            if (errorEl) errorEl.style.display = 'none';
-        });
+        video.addEventListener('error', function () { if (errorEl) errorEl.style.display = 'block'; });
+        video.addEventListener('loadedmetadata', function () { if (errorEl) errorEl.style.display = 'none'; });
     }
 
-    // Play button overlay
     if (playBtn && video && overlay) {
         playBtn.addEventListener('click', function () {
-            if (!video.src || video.src === window.location.href) {
-                // No video loaded yet — try default MOXO intro path
-                loadVideo('/quarry/moxo_intro.mp4');
-            }
+            if (!video.src || video.src === window.location.href) loadVideo('/quarry/moxo_intro.mp4');
             video.play().then(function () {
                 overlay.classList.add('hidden');
                 video.setAttribute('controls', '');
-            }).catch(function () {
-                if (errorEl) errorEl.style.display = 'block';
-            });
+            }).catch(function () { if (errorEl) errorEl.style.display = 'block'; });
         });
+        video.addEventListener('ended', function () { overlay.classList.remove('hidden'); });
+    }
 
-        video.addEventListener('pause', function () {
-            if (video.ended) {
-                overlay.classList.remove('hidden');
-            }
+    // --- Chat ---
+    var chatEl = document.getElementById('nitzutzChat');
+    var chatInput = document.getElementById('chatInput');
+    var chatSendBtn = document.getElementById('chatSendBtn');
+
+    function addBubble(text, who) {
+        var div = document.createElement('div');
+        div.className = 'chat-bubble ' + who;
+        div.innerHTML = text;
+        chatEl.appendChild(div);
+        chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function sendMessage() {
+        var msg = chatInput.value.trim();
+        if (!msg) return;
+        addBubble(msg, 'student');
+        chatInput.value = '';
+
+        // Send to orchestrator via proxy
+        fetch('/proxy/9995/orchestrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'evaluate-gate',
+                student_input: msg,
+                token: token,
+                timestamp: video ? video.currentTime : 0
+            })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            addBubble(data.feedback || data.message || 'Processing...', 'nitzutz');
+        })
+        .catch(function () {
+            addBubble('Connection interrupted. Please try again.', 'nitzutz');
         });
     }
 
-    // --- Intercept any dynamically injected video URLs ---
-    // If the blueprint/orchestrator pushes a video URL via postMessage or
-    // data attribute, normalise it before the browser tries to fetch.
-    window.addEventListener('message', function (e) {
-        if (e.data && e.data.type === 'rotem-video' && e.data.url) {
-            loadVideo(e.data.url);
-        }
+    if (chatSendBtn) chatSendBtn.addEventListener('click', sendMessage);
+    if (chatInput) chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
-    // Also check for a data attribute on the video element (set by server-side injection)
-    if (video && video.dataset.src) {
-        loadVideo(video.dataset.src);
+    // --- Rescue Button ---
+    var rescueBtn = document.getElementById('rescueBtn');
+    if (rescueBtn) {
+        rescueBtn.addEventListener('click', function () {
+            rescueBtn.classList.add('active');
+            setTimeout(function () { rescueBtn.classList.remove('active'); }, 1000);
+
+            addBubble('<em>Requesting context reset...</em>', 'student');
+
+            fetch('/proxy/9997/reset-context', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    force_context_reset: true,
+                    token: token,
+                    reason: 'student_requested',
+                    video_timestamp: video ? video.currentTime : 0
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                addBubble(
+                    data.message ||
+                    'Got it. Resetting clinical focus. Let\u2019s look at this segment again from a new perspective\u2026',
+                    'nitzutz'
+                );
+            })
+            .catch(function () {
+                addBubble(
+                    'Got it. Resetting clinical focus. Let\u2019s look at this segment again from a new perspective\u2026',
+                    'nitzutz'
+                );
+            });
+        });
     }
 
-    // Expose globally for orchestrator integration
+    // --- External integrations ---
+    window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'rotem-video' && e.data.url) loadVideo(e.data.url);
+    });
+    if (video && video.dataset.src) loadVideo(video.dataset.src);
     window.RoTEM_loadVideo = loadVideo;
     window.RoTEM_normaliseMediaUrl = normaliseMediaUrl;
 })();
