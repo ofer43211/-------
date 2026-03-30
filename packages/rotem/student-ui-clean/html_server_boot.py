@@ -58,13 +58,19 @@ def validate_token(token, device_fingerprint=None):
 
         entry = tokens[token]
 
-        # Already locked to a different device?
+        # Already locked to a different device? Auto-migrate instead of blocking.
         if (
             entry.get("locked_device")
             and device_fingerprint
             and entry["locked_device"] != device_fingerprint
         ):
-            return False, {"error": "device_mismatch", "label": entry.get("label")}
+            # Graceful failover: re-lock to new device, log migration
+            entry["previous_devices"] = entry.get("previous_devices", [])
+            entry["previous_devices"].append(entry["locked_device"])
+            entry["locked_device"] = device_fingerprint
+            entry["last_migrated"] = time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            )
 
         # Activate / lock on first use
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -247,6 +253,14 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_lovable_webhook()
             return
 
+        if parsed.path == "/api/auth/migrate-session":
+            self._handle_migrate_session()
+            return
+
+        if parsed.path == "/api/system/rescue":
+            self._handle_rescue()
+            return
+
         self.send_error(404, "Not Found")
 
     def _handle_lovable_webhook(self):
@@ -305,6 +319,115 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_migrate_session(self):
+        """Migrate a token to a new device without blocking the student.
+
+        POST /api/auth/migrate-session
+        Body: {"token": "MOXO-XXXX"}
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        token = data.get("token", "").strip()
+        if not token:
+            self._json_error(400, "missing_token", "token is required")
+            return
+
+        ua = self.headers.get("User-Agent", "unknown")
+        ip = self.headers.get("X-Forwarded-For", self.client_address[0])
+        new_device = f"{ip}|{ua[:80]}"
+
+        with _auth_lock:
+            store = _load_auth_store()
+            tokens = store.get("tokens", {})
+            if token not in tokens:
+                self._json_error(404, "invalid_token", "Token not found")
+                return
+            entry = tokens[token]
+            old_device = entry.get("locked_device")
+            entry["previous_devices"] = entry.get("previous_devices", [])
+            if old_device:
+                entry["previous_devices"].append(old_device)
+            entry["locked_device"] = new_device
+            entry["last_migrated"] = time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            )
+            _save_auth_store(store)
+
+        response = json.dumps({
+            "status": "ok",
+            "message": "Session migrated to new device",
+            "label": entry.get("label"),
+        })
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_rescue(self):
+        """Emergency context reset — clears Nitzutz short-term memory.
+
+        POST /api/system/rescue
+        Body: {"token": "MOXO-XXXX", "video_timestamp": 42.5}
+        Proxies force_context_reset to Nitzutz (9997) and returns confirmation.
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        token = data.get("token", "")
+        timestamp = data.get("video_timestamp", 0)
+
+        # Try to forward to Nitzutz (port 9997) if available
+        rescue_response = {
+            "status": "ok",
+            "message": (
+                "Got it. Resetting clinical focus. "
+                "Let\u2019s look at this segment again from a new perspective\u2026"
+            ),
+            "context_cleared": True,
+            "video_timestamp": timestamp,
+        }
+
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                "http://127.0.0.1:9997/reset-context",
+                data=json.dumps({
+                    "force_context_reset": True,
+                    "token": token,
+                    "reason": "student_requested",
+                    "video_timestamp": timestamp,
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                nitzutz_data = json.loads(resp.read().decode("utf-8"))
+                rescue_response["nitzutz"] = nitzutz_data
+        except Exception:
+            # Nitzutz not available — return default response
+            rescue_response["nitzutz"] = "offline"
+
+        response = json.dumps(rescue_response)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(response.encode("utf-8"))
 

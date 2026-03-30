@@ -593,13 +593,11 @@
 
             addBubble('<em>Requesting context reset...</em>', 'student');
 
-            fetch('/proxy/9997/reset-context', {
+            fetch('/api/system/rescue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    force_context_reset: true,
                     token: token,
-                    reason: 'student_requested',
                     video_timestamp: video ? video.currentTime : 0
                 })
             })
