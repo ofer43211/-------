@@ -14,6 +14,8 @@ import argparse
 import http.server
 import json
 import os
+import queue as _queue_module
+import random
 import socketserver
 import threading
 import time
@@ -24,6 +26,11 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 AUTH_STORE_PATH = BASE_DIR / "auth_store.json"
+KNOWLEDGE_BASE_PATH = BASE_DIR / "rotem_knowledge_base.json"
+
+# --- SSE clients registry (v7.0 real-time pipeline) ---
+_sse_clients = []  # list of (queue, token_filter)
+_sse_lock = threading.Lock()
 
 # --- Token / Auth Store ---
 
@@ -120,6 +127,150 @@ def provision_token(name, email, location=""):
         }
         _save_auth_store(store)
         return token_id, label
+
+# --- Knowledge Base (Clinical Git v7.0) ---
+
+_knowledge_lock = threading.Lock()
+
+
+def _load_knowledge_base():
+    """Load knowledge base from disk."""
+    if not KNOWLEDGE_BASE_PATH.exists():
+        return {"schema_version": 1, "insights": [], "merged": []}
+    with open(KNOWLEDGE_BASE_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_knowledge_base(kb):
+    """Persist knowledge base to disk."""
+    with open(KNOWLEDGE_BASE_PATH, "w", encoding="utf-8") as f:
+        json.dump(kb, f, indent=2, ensure_ascii=False)
+
+
+def commit_insight(token, content, video_timestamp=0, lineage_id=None):
+    """Silently commit a clinical insight (student-generated)."""
+    with _knowledge_lock:
+        kb = _load_knowledge_base()
+        insight_id = f"INS-{uuid.uuid4().hex[:8].upper()}"
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        insight = {
+            "id": insight_id,
+            "student_id": token,
+            "timestamp": video_timestamp,
+            "content": content,
+            "lineage_id": lineage_id,
+            "status": "pending",
+            "committed_at": now,
+        }
+        kb.setdefault("insights", []).append(insight)
+        _save_knowledge_base(kb)
+        return insight_id
+
+
+def merge_insight(insight_id):
+    """Approve (merge) a pending insight. Returns the insight or None."""
+    with _knowledge_lock:
+        kb = _load_knowledge_base()
+        for ins in kb.get("insights", []):
+            if ins["id"] == insight_id and ins["status"] == "pending":
+                ins["status"] = "approved"
+                ins["merged_at"] = time.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+                )
+                kb.setdefault("merged", []).append(ins["id"])
+                _save_knowledge_base(kb)
+                return ins
+        return None
+
+
+def sse_broadcast(event_type, data, token_filter=None):
+    """Push an SSE event to all connected clients."""
+    payload = json.dumps(data) if not isinstance(data, str) else data
+    message = f"event: {event_type}\ndata: {payload}\n\n"
+    with _sse_lock:
+        for client_queue, client_token in list(_sse_clients):
+            if token_filter and client_token and client_token != token_filter:
+                continue
+            try:
+                client_queue.put_nowait(message)
+            except _queue_module.Full:
+                pass  # Drop if client is too slow
+
+
+# --- Sensor Fusion (Adaptive Probing v7.0) ---
+
+_student_telemetry = {}  # token -> list of recent SensorTelemetry
+AMBIGUITY_THRESHOLD = 0.5
+
+
+def analyze_cognitive_state(telemetry):
+    """Evaluate sensor fusion for cognitive state.
+
+    Returns: 'focused', 'distracted', or 'ambiguous'.
+    If ambiguous, triggers an active probe.
+    """
+    state_scores = {
+        "camera_state": {"focused": 1.0, "zoning_out": 0.0}.get(
+            telemetry.get("camera_state", "focused"), 0.5
+        ),
+        "mouse_dynamics": {
+            "fluid": 1.0, "idle": 0.3, "erratic": 0.1
+        }.get(telemetry.get("mouse_dynamics", "idle"), 0.5),
+        "typing_cadence": {
+            "rhythmic": 1.0, "hesitant": 0.3, "idle": 0.5
+        }.get(telemetry.get("typing_cadence", "idle"), 0.5),
+    }
+
+    scores = list(state_scores.values())
+    avg = sum(scores) / len(scores)
+    variance = sum((s - avg) ** 2 for s in scores) / len(scores)
+
+    if variance > AMBIGUITY_THRESHOLD:
+        return "ambiguous", state_scores
+    if avg > 0.6:
+        return "focused", state_scores
+    return "distracted", state_scores
+
+
+# --- Macro Telemetry (Cluster Detection v7.0) ---
+
+_session_energy_log = []  # list of {token, timestamp, energy, video_ts}
+
+
+def detect_timeline_clusters(window_seconds=5, threshold=3):
+    """Sliding-window cluster detection for macro anomalies.
+
+    If >= threshold students have low energy within the same
+    video_timestamp +/- window_seconds, trigger MACRO_ANOMALY.
+    """
+    now = time.time()
+    # Only look at last 60 seconds of real-time logs
+    recent = [e for e in _session_energy_log if now - e["wall_time"] < 60]
+
+    if len(recent) < threshold:
+        return None
+
+    # Group by video_timestamp buckets
+    buckets = {}
+    for entry in recent:
+        vt = round(entry.get("video_ts", 0) / window_seconds) * window_seconds
+        buckets.setdefault(vt, []).append(entry)
+
+    for vt, entries in buckets.items():
+        low_energy = [e for e in entries if e.get("energy", 1.0) < 0.35]
+        unique_tokens = set(e["token"] for e in low_energy)
+        if len(unique_tokens) >= threshold:
+            return {
+                "video_timestamp": vt,
+                "students_affected": len(unique_tokens),
+                "message": (
+                    f"Cluster Drop Detected: {len(unique_tokens)} students lost focus "
+                    f"at [{int(vt // 60)}:{int(vt % 60):02d}]. "
+                    f"Recommend reviewing instructional material at this timestamp."
+                ),
+            }
+    return None
+
 
 # English-speaking country IP ranges would be resolved via GeoIP in production.
 # For now, we use heuristics: query params, cookies, and Accept-Language header.
@@ -230,6 +381,16 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_token_validate(parsed)
             return
 
+        # SSE event stream (v7.0)
+        if path == "/api/events":
+            self._handle_sse_stream(parsed)
+            return
+
+        # Knowledge base status (v7.0 — Command Deck)
+        if path == "/api/knowledge/pending":
+            self._handle_knowledge_pending()
+            return
+
         # Let the default handler serve static files
         super().do_GET()
 
@@ -259,6 +420,20 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/system/rescue":
             self._handle_rescue()
+            return
+
+        # v7.0 — Knowledge Engine
+        if parsed.path == "/api/knowledge/commit":
+            self._handle_knowledge_commit()
+            return
+
+        if parsed.path == "/api/knowledge/merge":
+            self._handle_knowledge_merge()
+            return
+
+        # v7.0 — Sensor Fusion
+        if parsed.path == "/api/telemetry/sensor-fusion":
+            self._handle_sensor_fusion()
             return
 
         self.send_error(404, "Not Found")
@@ -431,6 +606,199 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(response.encode("utf-8"))
 
+    # =========================================================
+    # v7.0 — Knowledge Engine, Sensor Fusion, SSE, Macro Telemetry
+    # =========================================================
+
+    def _handle_knowledge_commit(self):
+        """POST /api/knowledge/commit — Silently commit a clinical insight."""
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        tok = data.get("token", "")
+        content = data.get("content", "").strip()
+        vts = data.get("video_timestamp", 0)
+        lineage = data.get("lineage_id")
+
+        if not content:
+            self._json_error(400, "empty_content", "Insight content is required")
+            return
+
+        insight_id = commit_insight(tok, content, vts, lineage)
+
+        response = json.dumps({"status": "ok", "insight_id": insight_id})
+        self.send_response(201)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_knowledge_merge(self):
+        """POST /api/knowledge/merge — Approve a pending insight (Command Deck).
+
+        Triggers INSIGHT_MERGED SSE event → Gold Flash on student UI.
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        insight_id = data.get("insight_id", "").strip()
+        if not insight_id:
+            self._json_error(400, "missing_id", "insight_id is required")
+            return
+
+        merged = merge_insight(insight_id)
+        if not merged:
+            self._json_error(404, "not_found", "Insight not found or already merged")
+            return
+
+        # Broadcast Gold Flash to the student who committed it
+        sse_broadcast("INSIGHT_MERGED", {
+            "insight_id": merged["id"],
+            "message": "Clinical Insight Verified & Merged into RoTEM Base.",
+        }, token_filter=merged.get("student_id"))
+
+        response = json.dumps({"status": "ok", "merged": merged})
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_knowledge_pending(self):
+        """GET /api/knowledge/pending — List pending insights for Command Deck."""
+        with _knowledge_lock:
+            kb = _load_knowledge_base()
+        pending = [i for i in kb.get("insights", []) if i.get("status") == "pending"]
+        body = json.dumps({"pending": pending, "total": len(pending)})
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body.encode("utf-8"))
+
+    def _handle_sensor_fusion(self):
+        """POST /api/telemetry/sensor-fusion — Process multimodal sensor input.
+
+        If cognitive state is AMBIGUOUS, triggers an Active Probe via SSE.
+        Also logs energy for macro-level cluster detection.
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        tok = data.get("token", "")
+        state, scores = analyze_cognitive_state(data)
+
+        # Compute energy score (0–1)
+        energy = sum(scores.values()) / len(scores) if scores else 0.5
+
+        # Log for macro telemetry
+        _session_energy_log.append({
+            "token": tok,
+            "wall_time": time.time(),
+            "video_ts": data.get("video_timestamp", 0),
+            "energy": energy,
+            "state": state,
+        })
+        # Keep log bounded
+        if len(_session_energy_log) > 500:
+            del _session_energy_log[:100]
+
+        # Broadcast energy update to student
+        sse_broadcast("ENERGY_UPDATE", {
+            "energy": round(energy * 100),
+            "state": state,
+        }, token_filter=tok)
+
+        # If AMBIGUOUS → trigger Active Probe
+        if state == "ambiguous":
+            probe_questions = [
+                "I noticed something interesting in your response pattern. "
+                "What connects the behaviour you just observed to something in your own clinical experience?",
+                "Let\u2019s shift perspective for a moment \u2014 if this were your patient, "
+                "what would be the first thing you\u2019d want to rule out?",
+                "Your attention seems to be pulling in two directions. "
+                "Which part of this segment feels most clinically significant to you right now?",
+            ]
+            question = random.choice(probe_questions)
+            sse_broadcast("ACTIVE_PROBE", {
+                "question": question,
+                "trigger": "ambiguity_resolver",
+                "scores": {k: round(v, 2) for k, v in scores.items()},
+            }, token_filter=tok)
+
+        # Check for macro-level clusters
+        anomaly = detect_timeline_clusters()
+        if anomaly:
+            sse_broadcast("MACRO_ANOMALY", anomaly)
+
+        response = json.dumps({
+            "status": "ok",
+            "state": state,
+            "energy": round(energy * 100),
+        })
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_sse_stream(self, parsed):
+        """GET /api/events — Server-Sent Events stream for real-time updates."""
+        query = urllib.parse.parse_qs(parsed.query)
+        tok = query.get("token", [None])[0]
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        client_queue = _queue_module.Queue(maxsize=50)
+        client_entry = (client_queue, tok)
+        with _sse_lock:
+            _sse_clients.append(client_entry)
+
+        try:
+            # Send initial heartbeat
+            self.wfile.write(b": connected\n\n")
+            self.wfile.flush()
+
+            while True:
+                try:
+                    message = client_queue.get(timeout=15)
+                    self.wfile.write(message.encode("utf-8"))
+                    self.wfile.flush()
+                except _queue_module.Empty:
+                    # Send keepalive comment
+                    self.wfile.write(b": heartbeat\n\n")
+                    self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+        finally:
+            with _sse_lock:
+                if client_entry in _sse_clients:
+                    _sse_clients.remove(client_entry)
+
     def _handle_student_journey(self, parsed):
         """Gate student_journey.html behind a valid MOXO token."""
         query = urllib.parse.parse_qs(parsed.query)
@@ -581,7 +949,11 @@ def main():
 
     handler = RoTEMRequestHandler
 
-    with socketserver.TCPServer((args.host, args.port), handler) as httpd:
+    class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+        allow_reuse_address = True
+        daemon_threads = True
+
+    with ThreadedTCPServer((args.host, args.port), handler) as httpd:
         print(f"RoTEM Student UI serving on http://{args.host}:{args.port}")
         print(f"  English: http://{args.host}:{args.port}/?lang=en")
         print(f"  Hebrew:  http://{args.host}:{args.port}/?lang=he")
