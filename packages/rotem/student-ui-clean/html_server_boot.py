@@ -509,6 +509,15 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_sensor_fusion()
             return
 
+        # v11.0 — WebRTC Signaling
+        if parsed.path in (
+            "/api/webrtc/offer",
+            "/api/webrtc/answer",
+            "/api/webrtc/ice",
+        ):
+            self._handle_webrtc_signal(parsed.path)
+            return
+
         # v9.7 — Emergency Protocols
         if parsed.path == "/api/system/intervention":
             self._handle_intervention()
@@ -1012,6 +1021,66 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             with _sse_lock:
                 if client_entry in _sse_clients:
                     _sse_clients.remove(client_entry)
+
+    # =========================================================
+    # v11.0 — WebRTC Signaling + Hardware Kill Switch
+    # =========================================================
+
+    def _handle_webrtc_signal(self, route_path):
+        """POST /api/webrtc/{offer,answer,ice} — Route WebRTC signals via SSE.
+
+        Body: {"sender_id": "MOXO-XX", "target_id": "architect"|"MOXO-YY", "data": {...}}
+        Routes the signal to the target peer via the appropriate SSE event.
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        sender_id = data.get("sender_id", "")
+        target_id = data.get("target_id", "")
+        signal_data = data.get("data", {})
+
+        # Map route to SSE event type
+        event_map = {
+            "/api/webrtc/offer": "WEBRTC_OFFER",
+            "/api/webrtc/answer": "WEBRTC_ANSWER",
+            "/api/webrtc/ice": "WEBRTC_ICE",
+        }
+        event_type = event_map.get(route_path, "WEBRTC_ICE")
+
+        payload = {
+            "sender_id": sender_id,
+            "target_id": target_id,
+            "data": signal_data,
+        }
+
+        # Route to specific target or broadcast
+        if target_id and target_id != "all":
+            sse_broadcast(event_type, payload, token_filter=target_id)
+        else:
+            sse_broadcast(event_type, payload)
+
+        # Check if sender is in overtime → trigger audio kill switch
+        if sender_id in _student_bandwidth:
+            bw = _student_bandwidth[sender_id]
+            if bw.get("is_overtime"):
+                sse_broadcast("AUDIO_KILL_SWITCH", {
+                    "studentId": sender_id,
+                    "mute": True,
+                    "reason": "Neural Bandwidth Depleted",
+                })
+
+        response = json.dumps({"status": f"{event_type.lower()}_routed"})
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
 
     # =========================================================
     # v9.7 — Emergency Protocols (Intervention & Hard Clear)

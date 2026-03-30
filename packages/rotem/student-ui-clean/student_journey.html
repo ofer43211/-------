@@ -761,6 +761,94 @@
             color: var(--text-dim);
         }
 
+        /* --- v11.0 WebRTC Video Grid --- */
+        .rtc-grid {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 3;
+        }
+        .rtc-frame {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid rgba(0,240,255,0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 0 rgba(0,240,255,0);
+            backdrop-filter: blur(4px);
+            background: rgba(15,23,42,0.6);
+            transition: border-color 0.4s, box-shadow 0.4s;
+        }
+        .rtc-frame.remote {
+            width: 200px;
+            height: 150px;
+        }
+        .rtc-frame.local {
+            width: 120px;
+            height: 90px;
+        }
+        .rtc-frame video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .rtc-frame-label {
+            position: absolute;
+            bottom: 4px;
+            left: 6px;
+            font-family: var(--mono);
+            font-size: 0.5rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            background: rgba(0,0,0,0.5);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        /* Active speaker aura */
+        .rtc-frame.speaking {
+            border-color: var(--cyan);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 16px rgba(0,240,255,0.25);
+        }
+        /* Hardware mute visual (overtime) */
+        .rtc-frame.muted-hw {
+            border-color: var(--red);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 12px rgba(239,68,68,0.15);
+            animation: rtc-mute-pulse 2s ease infinite;
+        }
+        @keyframes rtc-mute-pulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 8px rgba(239,68,68,0.1); }
+            50% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 16px rgba(239,68,68,0.25); }
+        }
+        .rtc-clock-overlay {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            font-weight: 600;
+            color: var(--cyan);
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            backdrop-filter: blur(4px);
+        }
+        .rtc-clock-overlay.low { color: var(--amber); }
+        .rtc-clock-overlay.overtime { color: var(--red); }
+        .rtc-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-family: var(--mono);
+        }
+
         /* --- Responsive --- */
         @media (max-width: 768px) {
             .journey-main {
@@ -816,6 +904,21 @@
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--cyan)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 </button>
             </div>
+            <!-- v11.0 WebRTC Video Grid -->
+            <div class="rtc-grid" id="rtcGrid">
+                <div class="rtc-frame remote" id="rtcRemoteFrame">
+                    <video id="remoteVideo" autoplay playsinline></video>
+                    <div class="rtc-placeholder" id="rtcRemotePlaceholder">Waiting for mentor...</div>
+                    <div class="rtc-frame-label">Mentor</div>
+                </div>
+                <div class="rtc-frame local" id="rtcLocalFrame">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div class="rtc-placeholder" id="rtcLocalPlaceholder">Camera off</div>
+                    <div class="rtc-frame-label">You</div>
+                    <div class="rtc-clock-overlay" id="rtcClockOverlay">3:00</div>
+                </div>
+            </div>
+
             <!-- HUD Overlay -->
             <div class="video-hud">
                 <div class="hud-progress">
@@ -1433,6 +1536,213 @@
         });
     }
 
+    // =========================================================
+    // v11.0 — WebRTC Clinical VTC + Hardware Kill Switch
+    // =========================================================
+
+    var localVideo = document.getElementById('localVideo');
+    var remoteVideo = document.getElementById('remoteVideo');
+    var rtcLocalFrame = document.getElementById('rtcLocalFrame');
+    var rtcRemoteFrame = document.getElementById('rtcRemoteFrame');
+    var rtcLocalPlaceholder = document.getElementById('rtcLocalPlaceholder');
+    var rtcRemotePlaceholder = document.getElementById('rtcRemotePlaceholder');
+    var rtcClockOverlay = document.getElementById('rtcClockOverlay');
+
+    var localStream = null;
+    var peerConnection = null;
+    var rtcConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    // Initialize local media
+    function initLocalMedia() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(function (stream) {
+            localStream = stream;
+            if (localVideo) {
+                localVideo.srcObject = stream;
+                if (rtcLocalPlaceholder) rtcLocalPlaceholder.style.display = 'none';
+            }
+            // Flag voice active for sensor fusion
+            window.RoTEM_setVoiceActive(true);
+            // Start audio analyzer for active speaker aura
+            startAudioAnalyzer(stream);
+            // Initialize peer connection
+            initPeerConnection();
+        })
+        .catch(function (err) {
+            console.warn('RoTEM: Camera/mic access denied:', err.name);
+            if (rtcLocalPlaceholder) rtcLocalPlaceholder.textContent = 'No camera';
+        });
+    }
+
+    // Audio level analyzer for active speaker aura
+    function startAudioAnalyzer(stream) {
+        try {
+            var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            var analyser = audioCtx.createAnalyser();
+            var source = audioCtx.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+            var dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            function checkLevel() {
+                analyser.getByteFrequencyData(dataArray);
+                var sum = 0;
+                for (var i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                var avg = sum / dataArray.length;
+
+                if (rtcLocalFrame) {
+                    if (avg > 20 && !rtcLocalFrame.classList.contains('muted-hw')) {
+                        rtcLocalFrame.classList.add('speaking');
+                    } else {
+                        rtcLocalFrame.classList.remove('speaking');
+                    }
+                }
+                requestAnimationFrame(checkLevel);
+            }
+            checkLevel();
+        } catch (e) { /* AudioContext not supported */ }
+    }
+
+    // Peer connection setup
+    function initPeerConnection() {
+        if (!localStream) return;
+
+        peerConnection = new RTCPeerConnection(rtcConfig);
+
+        // Add local tracks
+        localStream.getTracks().forEach(function (track) {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // Handle remote stream
+        peerConnection.ontrack = function (event) {
+            if (remoteVideo && event.streams && event.streams[0]) {
+                remoteVideo.srcObject = event.streams[0];
+                if (rtcRemotePlaceholder) rtcRemotePlaceholder.style.display = 'none';
+            }
+        };
+
+        // ICE candidates → send to signaling server
+        peerConnection.onicecandidate = function (event) {
+            if (event.candidate) {
+                fetch('/api/webrtc/ice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sender_id: token,
+                        target_id: 'architect',
+                        data: event.candidate.toJSON()
+                    })
+                }).catch(function () {});
+            }
+        };
+
+        peerConnection.onconnectionstatechange = function () {
+            if (peerConnection.connectionState === 'connected') {
+                if (rtcRemotePlaceholder) rtcRemotePlaceholder.style.display = 'none';
+            }
+        };
+    }
+
+    // Handle incoming signaling via SSE
+    if (eventSource) {
+        eventSource.addEventListener('WEBRTC_OFFER', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.target_id !== token && data.target_id !== 'all') return;
+                if (!peerConnection) initPeerConnection();
+                peerConnection.setRemoteDescription(new RTCSessionDescription(data.data))
+                .then(function () { return peerConnection.createAnswer(); })
+                .then(function (answer) { return peerConnection.setLocalDescription(answer); })
+                .then(function () {
+                    fetch('/api/webrtc/answer', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sender_id: token,
+                            target_id: data.sender_id,
+                            data: peerConnection.localDescription.toJSON()
+                        })
+                    });
+                });
+            } catch (err) {}
+        });
+
+        eventSource.addEventListener('WEBRTC_ANSWER', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.target_id !== token) return;
+                if (peerConnection) {
+                    peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
+                }
+            } catch (err) {}
+        });
+
+        eventSource.addEventListener('WEBRTC_ICE', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.target_id !== token && data.target_id !== 'all') return;
+                if (peerConnection) {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(data.data));
+                }
+            } catch (err) {}
+        });
+
+        // v11.0 Hardware Kill Switch
+        eventSource.addEventListener('AUDIO_KILL_SWITCH', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.studentId !== token) return;
+                enforceAudioMute(data.mute);
+            } catch (err) {}
+        });
+    }
+
+    // Hardware-level audio mute/unmute
+    function enforceAudioMute(shouldMute) {
+        if (!localStream) return;
+        var audioTracks = localStream.getAudioTracks();
+        for (var i = 0; i < audioTracks.length; i++) {
+            audioTracks[i].enabled = !shouldMute;
+        }
+        // Update visual state
+        if (rtcLocalFrame) {
+            if (shouldMute) {
+                rtcLocalFrame.classList.add('muted-hw');
+                rtcLocalFrame.classList.remove('speaking');
+            } else {
+                rtcLocalFrame.classList.remove('muted-hw');
+            }
+        }
+        window.RoTEM_setVoiceActive(!shouldMute);
+    }
+
+    // Update clock overlay on local video frame
+    var _origUpdateClockUI = updateClockUI;
+    updateClockUI = function (ms) {
+        _origUpdateClockUI(ms);
+        if (rtcClockOverlay) {
+            rtcClockOverlay.textContent = formatBandwidth(ms);
+            rtcClockOverlay.classList.remove('low', 'overtime');
+            if (ms <= 0) rtcClockOverlay.classList.add('overtime');
+            else if (ms <= 30000) rtcClockOverlay.classList.add('low');
+        }
+        // Hardware enforce: mute audio at 0
+        if (ms <= 0) {
+            enforceAudioMute(true);
+        }
+    };
+
+    // Auto-init camera on page load
+    initLocalMedia();
+
     // --- External integrations ---
     window.addEventListener('message', function (e) {
         if (e.data && e.data.type === 'rotem-video' && e.data.url) loadVideo(e.data.url);
@@ -1441,6 +1751,8 @@
     window.RoTEM_loadVideo = loadVideo;
     window.RoTEM_normaliseMediaUrl = normaliseMediaUrl;
     window.RoTEM_triggerGoldFlash = triggerGoldFlash;
+    window.RoTEM_enforceAudioMute = enforceAudioMute;
+    window.RoTEM_initLocalMedia = initLocalMedia;
 })();
 </script>
 </body>
