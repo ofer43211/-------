@@ -1893,6 +1893,58 @@
     // Auto-init camera on page load
     initLocalMedia();
 
+    // =========================================================
+    // v13.0 — Neural Pulse Transmitter (10Hz → Command Deck)
+    // =========================================================
+    (function initNeuralTransmitter() {
+        var TRANSMIT_HZ = 10; // 10 times per second
+        var WAVEFORM_POINTS = 64; // resolution of waveform snapshot
+        var neuralT = 0;
+
+        function computeStressIndex() {
+            // Derive stress from sensor state + bandwidth
+            var idle = Date.now() - sensorState.lastMouseTime > 8000;
+            var mouseScore = idle ? 0.3 : (classifyMouseDynamics() === 'erratic' ? 0.9 : 0.2);
+            var typingScore = classifyTypingCadence() === 'hesitant' ? 0.7 : 0.2;
+            var focusScore = sensorState.focusLost ? 0.8 : 0.1;
+            return Math.min(1, (mouseScore + typingScore + focusScore) / 3);
+        }
+
+        function generateWaveformSnapshot(stress) {
+            // Generate waveform y-values (0-1 normalised) reflecting current stress
+            var points = [];
+            var baseFreq = 0.15 + stress * 0.3;
+            var amp = 0.3 + stress * 0.5;
+            var jitter = stress * 0.25;
+            for (var i = 0; i < WAVEFORM_POINTS; i++) {
+                var x = i / WAVEFORM_POINTS;
+                var y = 0.5 +
+                    Math.sin(x * Math.PI * 2 * baseFreq * 8 + neuralT) * amp * 0.5 +
+                    Math.sin(x * Math.PI * 2 * baseFreq * 3 + neuralT * 1.7) * amp * 0.3 +
+                    (Math.random() - 0.5) * jitter;
+                points.push(Math.max(0, Math.min(1, y)));
+            }
+            return points;
+        }
+
+        setInterval(function () {
+            if (!token) return;
+            neuralT += 0.3;
+            var stress = computeStressIndex();
+            var waveform = generateWaveformSnapshot(stress);
+
+            fetch('/api/telemetry/neural', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: token,
+                    waveform: waveform,
+                    stress_index: stress
+                })
+            }).catch(function () { /* silent — high frequency, failures expected */ });
+        }, 1000 / TRANSMIT_HZ);
+    })();
+
     // --- External integrations ---
     window.addEventListener('message', function (e) {
         if (e.data && e.data.type === 'rotem-video' && e.data.url) loadVideo(e.data.url);

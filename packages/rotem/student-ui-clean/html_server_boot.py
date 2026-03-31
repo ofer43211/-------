@@ -347,6 +347,34 @@ def analyze_cognitive_state(telemetry):
     return "distracted", state_scores
 
 
+# --- v13.0 Live Neural Telemetry ---
+_neural_telemetry_lock = threading.Lock()
+_neural_telemetry = {}  # token -> {waveform: [...], stress_index: float, ts: float}
+
+
+def update_neural_telemetry(token, waveform, stress_index):
+    """Store latest neural waveform snapshot for a student."""
+    with _neural_telemetry_lock:
+        _neural_telemetry[token] = {
+            "waveform": waveform,  # list of y-values (0-1 normalised)
+            "stress_index": round(stress_index, 3),
+            "ts": time.time(),
+        }
+
+
+def get_neural_telemetry(token=None):
+    """Retrieve latest neural telemetry for one or all students."""
+    with _neural_telemetry_lock:
+        if token:
+            return _neural_telemetry.get(token)
+        # Return all (pruned to last 30s)
+        now = time.time()
+        return {
+            t: d for t, d in _neural_telemetry.items()
+            if now - d["ts"] < 30
+        }
+
+
 # --- Macro Telemetry (Cluster Detection v7.0) ---
 
 _session_energy_log = []  # list of {token, timestamp, energy, video_ts}
@@ -557,6 +585,16 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._handle_knowledge_pending()
             return
 
+        # v13.0 — Neural telemetry snapshot (for Command Deck polling)
+        if path == "/api/telemetry/neural":
+            self._handle_neural_telemetry_get()
+            return
+
+        # v13.0 — Command Deck
+        if path == "/command_deck.html" or path == "/command_deck" or path == "/deck":
+            self._serve_file("command_deck.html")
+            return
+
         # Let the default handler serve static files
         super().do_GET()
 
@@ -607,6 +645,11 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
         # v7.0 — Sensor Fusion
         if parsed.path == "/api/telemetry/sensor-fusion":
             self._handle_sensor_fusion()
+            return
+
+        # v13.0 — Live Neural Telemetry (high-frequency from student)
+        if parsed.path == "/api/telemetry/neural":
+            self._handle_neural_telemetry_post()
             return
 
         # v11.0 — WebRTC Signaling
@@ -1082,6 +1125,53 @@ class RoTEMRequestHandler(http.server.SimpleHTTPRequestHandler):
             "state": state,
             "energy": round(energy * 100),
         })
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_neural_telemetry_post(self):
+        """POST /api/telemetry/neural — High-frequency neural waveform from student.
+
+        Accepts waveform y-values + stress_index, stores and broadcasts via SSE.
+        Called at 10Hz from student_journey.html.
+        """
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length)
+        try:
+            data = json.loads(body.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json_error(400, "invalid_json", "Body must be valid JSON")
+            return
+
+        tok = data.get("token", "")
+        waveform = data.get("waveform", [])
+        stress_index = float(data.get("stress_index", 0.5))
+
+        if tok:
+            update_neural_telemetry(tok, waveform, stress_index)
+            # Broadcast to Command Deck (no token filter — architect sees all)
+            sse_broadcast("NEURAL_TELEMETRY", {
+                "student_id": tok,
+                "waveform": waveform,
+                "stress_index": round(stress_index, 3),
+                "ts": time.time(),
+            })
+
+        response = json.dumps({"status": "ok"})
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(response.encode("utf-8"))
+
+    def _handle_neural_telemetry_get(self):
+        """GET /api/telemetry/neural — Snapshot of all active neural telemetry."""
+        all_telemetry = get_neural_telemetry()
+        response = json.dumps({"status": "ok", "students": all_telemetry})
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(response)))
