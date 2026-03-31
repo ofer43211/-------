@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoTEM Command Deck — Neural Telemetry</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+    --bg-obsidian:#0a0a0f;
+    --bg-card:#111118;
+    --bg-card-hover:#181825;
+    --cyan:#00d4ff;
+    --cyan-dim:rgba(0,212,255,0.15);
+    --amber:#ffb020;
+    --red:#ff3b3b;
+    --gold:#ffd700;
+    --text-primary:#e0e0e8;
+    --text-dim:#888899;
+    --border:rgba(0,212,255,0.12);
+    --font-mono:'SF Mono','Fira Code','Cascadia Code',monospace;
+    --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+html,body{height:100%;background:var(--bg-obsidian);color:var(--text-primary);font-family:var(--font-sans);overflow-x:hidden}
+
+/* --- Header Bar --- */
+.deck-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 24px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(0,212,255,0.04) 0%,transparent 100%);
+}
+.deck-title{font-size:18px;font-weight:700;letter-spacing:1px;color:var(--cyan)}
+.deck-title span{color:var(--text-dim);font-weight:400;font-size:13px;margin-left:8px}
+.deck-status{display:flex;gap:16px;align-items:center;font-size:12px;font-family:var(--font-mono);color:var(--text-dim)}
+.deck-status .live-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:pulse-live 2s ease infinite}
+@keyframes pulse-live{0%,100%{opacity:1;box-shadow:0 0 4px var(--cyan)}50%{opacity:0.4;box-shadow:0 0 12px var(--cyan)}}
+
+/* --- Fleet Grid --- */
+.fleet-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    gap:16px;padding:20px 24px;
+}
+
+/* --- Student Card --- */
+.student-card{
+    position:relative;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:16px;
+    cursor:pointer;
+    transition:all 0.3s ease;
+    overflow:hidden;
+}
+.student-card:hover{
+    background:var(--bg-card-hover);
+    border-color:rgba(0,212,255,0.3);
+    transform:translateY(-2px);
+    box-shadow:0 4px 20px rgba(0,212,255,0.08);
+}
+.student-card.expanded{
+    grid-column:span 2;
+    grid-row:span 2;
+}
+.student-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.student-label{font-size:14px;font-weight:600;color:var(--cyan);font-family:var(--font-mono)}
+.student-status{font-size:11px;padding:2px 8px;border-radius:10px;font-family:var(--font-mono)}
+.student-status.active{background:rgba(0,212,255,0.12);color:var(--cyan)}
+.student-status.ready{background:rgba(255,176,32,0.12);color:var(--amber)}
+.student-status.overtime{background:rgba(255,59,59,0.12);color:var(--red)}
+
+.student-meta{font-size:11px;color:var(--text-dim);font-family:var(--font-mono);display:flex;gap:12px;margin-bottom:8px}
+.student-meta .bw{color:var(--cyan)}
+.student-meta .bw.low{color:var(--amber)}
+.student-meta .bw.overtime{color:var(--red)}
+
+/* --- Neural Overlay Canvas --- */
+.neural-overlay-wrap{
+    position:relative;
+    width:100%;height:0;
+    overflow:hidden;
+    transition:height 0.4s cubic-bezier(0.4,0,0.2,1);
+    border-radius:6px;
+    margin-top:8px;
+}
+.student-card:hover .neural-overlay-wrap,
+.student-card.expanded .neural-overlay-wrap{
+    height:120px;
+}
+.student-card.expanded .neural-overlay-wrap{
+    height:200px;
+}
+.neural-canvas{
+    position:absolute;top:0;left:0;
+    width:100%;height:100%;
+    border-radius:6px;
+    background:rgba(0,0,0,0.4);
+}
+
+/* --- Stress Indicator Bar --- */
+.stress-bar{
+    height:3px;border-radius:2px;
+    background:rgba(0,212,255,0.1);
+    margin-top:6px;overflow:hidden;
+}
+.stress-fill{
+    height:100%;border-radius:2px;
+    background:var(--cyan);
+    transition:width 0.3s ease, background 0.3s ease;
+}
+.stress-fill.medium{background:var(--amber)}
+.stress-fill.high{background:var(--red)}
+
+/* --- Empty State --- */
+.fleet-empty{
+    text-align:center;padding:60px 20px;
+    color:var(--text-dim);font-size:14px;
+}
+.fleet-empty .icon{font-size:48px;margin-bottom:16px;opacity:0.3}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,212,255,0.2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,212,255,0.4)}
+
+/* --- Responsive --- */
+@media(max-width:600px){
+    .fleet-grid{grid-template-columns:1fr;padding:12px}
+    .student-card.expanded{grid-column:span 1;grid-row:span 1}
+}
+</style>
+</head>
+<body>
+
+<header class="deck-header">
+    <div class="deck-title">COMMAND DECK <span>Neural Telemetry v13.0</span></div>
+    <div class="deck-status">
+        <div class="live-dot"></div>
+        <span id="deckStudentCount">0 students</span>
+        <span id="deckClock">--:--:--</span>
+    </div>
+</header>
+
+<div class="fleet-grid" id="fleetGrid">
+    <div class="fleet-empty" id="fleetEmpty">
+        <div class="icon">&#x1F6F0;</div>
+        <p>Waiting for student connections...</p>
+        <p style="font-size:12px;margin-top:8px">Neural streams will appear here in real-time</p>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    var fleetGrid = document.getElementById('fleetGrid');
+    var fleetEmpty = document.getElementById('fleetEmpty');
+    var deckStudentCount = document.getElementById('deckStudentCount');
+    var deckClock = document.getElementById('deckClock');
+
+    // Student card registry: token -> {card, canvas, ctx, waveform, stress, expanded}
+    var students = {};
+
+    // --- Clock ---
+    setInterval(function () {
+        var now = new Date();
+        deckClock.textContent = now.toTimeString().split(' ')[0];
+    }, 1000);
+
+    // --- SSE Connection ---
+    var eventSource = new EventSource('/api/events?token=architect');
+
+    eventSource.addEventListener('NEURAL_TELEMETRY', function (e) {
+        try {
+            var data = JSON.parse(e.data);
+            var sid = data.student_id;
+            if (!sid) return;
+
+            if (!students[sid]) {
+                createStudentCard(sid);
+            }
+            students[sid].waveform = data.waveform || [];
+            students[sid].stress = data.stress_index || 0;
+            updateStressBar(sid);
+        } catch (err) {}
+    });
+
+    eventSource.addEventListener('BANDWIDTH_UPDATE', function (e) {
+        try {
+            var data = JSON.parse(e.data);
+            var sid = data.token;
+            if (!sid || !students[sid]) return;
+            students[sid].bandwidth = data.bandwidth_ms;
+            students[sid].isOvertime = data.is_overtime;
+            updateCardMeta(sid);
+        } catch (err) {}
+    });
+
+    eventSource.addEventListener('ENERGY_UPDATE', function (e) {
+        try {
+            var data = JSON.parse(e.data);
+            // Energy updates are token-filtered; for architect, update matching student
+        } catch (err) {}
+    });
+
+    eventSource.addEventListener('MACRO_ANOMALY', function (e) {
+        try {
+            var data = JSON.parse(e.data);
+            // Flash all cards red briefly
+            Object.keys(students).forEach(function (sid) {
+                var card = students[sid].card;
+                card.style.borderColor = 'rgba(255,59,59,0.6)';
+                setTimeout(function () { card.style.borderColor = ''; }, 2000);
+            });
+        } catch (err) {}
+    });
+
+    eventSource.addEventListener('NUCLEAR_PROTOCOL', function (e) {
+        try {
+            var data = JSON.parse(e.data);
+            var sid = data.studentId;
+            if (sid && students[sid]) {
+                students[sid].card.style.borderColor = 'var(--red)';
+                students[sid].card.style.boxShadow = '0 0 20px rgba(255,59,59,0.3)';
+            }
+        } catch (err) {}
+    });
+
+    // --- Create Student Card ---
+    function createStudentCard(sid) {
+        if (fleetEmpty) {
+            fleetEmpty.style.display = 'none';
+        }
+
+        var card = document.createElement('div');
+        card.className = 'student-card';
+        card.dataset.sid = sid;
+
+        var header = document.createElement('div');
+        header.className = 'student-card-header';
+
+        var label = document.createElement('span');
+        label.className = 'student-label';
+        label.textContent = sid.toUpperCase();
+
+        var status = document.createElement('span');
+        status.className = 'student-status active';
+        status.textContent = 'LIVE';
+
+        header.appendChild(label);
+        header.appendChild(status);
+
+        var meta = document.createElement('div');
+        meta.className = 'student-meta';
+        meta.innerHTML = '<span class="bw" data-bw>BW: 180s</span><span data-stress>Stress: 0%</span>';
+
+        var overlayWrap = document.createElement('div');
+        overlayWrap.className = 'neural-overlay-wrap';
+
+        var canvas = document.createElement('canvas');
+        canvas.className = 'neural-canvas';
+        canvas.width = 560;
+        canvas.height = 200;
+        overlayWrap.appendChild(canvas);
+
+        var stressBar = document.createElement('div');
+        stressBar.className = 'stress-bar';
+        stressBar.innerHTML = '<div class="stress-fill" data-stress-fill style="width:0%"></div>';
+
+        card.appendChild(header);
+        card.appendChild(meta);
+        card.appendChild(overlayWrap);
+        card.appendChild(stressBar);
+
+        // Toggle expanded on click
+        card.addEventListener('click', function () {
+            card.classList.toggle('expanded');
+            students[sid].expanded = card.classList.contains('expanded');
+        });
+
+        fleetGrid.appendChild(card);
+
+        students[sid] = {
+            card: card,
+            canvas: canvas,
+            ctx: canvas.getContext('2d'),
+            waveform: [],
+            stress: 0,
+            bandwidth: 180000,
+            isOvertime: false,
+            expanded: false,
+            statusEl: status,
+            metaEl: meta,
+            stressBarEl: stressBar.querySelector('[data-stress-fill]'),
+        };
+
+        updateStudentCount();
+    }
+
+    function updateStudentCount() {
+        var count = Object.keys(students).length;
+        deckStudentCount.textContent = count + ' student' + (count !== 1 ? 's' : '');
+    }
+
+    function updateCardMeta(sid) {
+        var s = students[sid];
+        if (!s) return;
+        var bwEl = s.metaEl.querySelector('[data-bw]');
+        if (bwEl) {
+            var bwSec = Math.max(0, Math.round(s.bandwidth / 1000));
+            bwEl.textContent = 'BW: ' + bwSec + 's';
+            bwEl.className = 'bw';
+            if (s.isOvertime) bwEl.classList.add('overtime');
+            else if (s.bandwidth <= 30000) bwEl.classList.add('low');
+        }
+        // Update status badge
+        if (s.isOvertime) {
+            s.statusEl.className = 'student-status overtime';
+            s.statusEl.textContent = 'OVERTIME';
+        }
+    }
+
+    function updateStressBar(sid) {
+        var s = students[sid];
+        if (!s) return;
+        var pct = Math.round(s.stress * 100);
+        s.stressBarEl.style.width = pct + '%';
+        s.stressBarEl.className = 'stress-fill';
+        if (s.stress > 0.7) s.stressBarEl.classList.add('high');
+        else if (s.stress > 0.4) s.stressBarEl.classList.add('medium');
+
+        var stressEl = s.metaEl.querySelector('[data-stress]');
+        if (stressEl) stressEl.textContent = 'Stress: ' + pct + '%';
+    }
+
+    // --- Neural Waveform Renderer (60fps) ---
+    function renderAllWaveforms() {
+        Object.keys(students).forEach(function (sid) {
+            var s = students[sid];
+            if (!s.waveform || s.waveform.length === 0) return;
+
+            var canvas = s.canvas;
+            var ctx = s.ctx;
+            var W = canvas.width;
+            var H = canvas.height;
+
+            ctx.clearRect(0, 0, W, H);
+
+            // Determine color from stress
+            var stress = s.stress || 0;
+            var primaryColor, glowColor;
+            if (stress > 0.7) {
+                primaryColor = 'rgba(255,59,59,0.9)';
+                glowColor = 'rgba(255,59,59,0.3)';
+            } else if (stress > 0.4) {
+                primaryColor = 'rgba(255,176,32,0.9)';
+                glowColor = 'rgba(255,176,32,0.2)';
+            } else {
+                primaryColor = 'rgba(0,212,255,0.9)';
+                glowColor = 'rgba(0,212,255,0.15)';
+            }
+
+            var wf = s.waveform;
+            var step = W / (wf.length - 1 || 1);
+
+            // Glow layer
+            ctx.beginPath();
+            for (var i = 0; i < wf.length; i++) {
+                var x = i * step;
+                var y = (1 - wf[i]) * H;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = glowColor;
+            ctx.lineWidth = 6;
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+
+            // Sharp layer
+            ctx.beginPath();
+            for (var j = 0; j < wf.length; j++) {
+                var x2 = j * step;
+                var y2 = (1 - wf[j]) * H;
+                if (j === 0) ctx.moveTo(x2, y2);
+                else ctx.lineTo(x2, y2);
+            }
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 0;
+            ctx.stroke();
+
+            // Fill under curve
+            ctx.lineTo(W, H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fillStyle = glowColor;
+            ctx.fill();
+        });
+
+        requestAnimationFrame(renderAllWaveforms);
+    }
+    requestAnimationFrame(renderAllWaveforms);
+
+    // --- Bootstrap: fetch initial student list ---
+    fetch('/api/tokens')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.tokens && Array.isArray(data.tokens)) {
+                data.tokens.forEach(function (t) {
+                    if (t.status === 'active' && !students[t.token]) {
+                        createStudentCard(t.token);
+                        if (t.neural_bandwidth_ms !== undefined) {
+                            students[t.token].bandwidth = t.neural_bandwidth_ms;
+                            students[t.token].isOvertime = t.is_overtime || false;
+                            updateCardMeta(t.token);
+                        }
+                    }
+                });
+            }
+        })
+        .catch(function () {});
+
+})();
+</script>
+</body>
+</html>
