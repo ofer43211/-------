@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoTEM Academy | MOXO Assessment Journey</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --obsidian: #0a0e1a;
+            --obsidian-light: #111827;
+            --obsidian-card: #151c2c;
+            --obsidian-border: #1e293b;
+            --cyan: #00f0ff;
+            --cyan-dim: rgba(0,240,255,0.15);
+            --cyan-glow: rgba(0,240,255,0.3);
+            --amber: #f59e0b;
+            --amber-dim: rgba(245,158,11,0.15);
+            --green: #10b981;
+            --green-dim: rgba(16,185,129,0.15);
+            --red: #ef4444;
+            --red-dim: rgba(239,68,68,0.15);
+            --text: #e2e8f0;
+            --text-dim: #64748b;
+            --text-muted: #475569;
+            --font: 'Inter', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--obsidian);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Header --- */
+        .journey-header {
+            background: var(--obsidian-light);
+            border-bottom: 1px solid var(--obsidian-border);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .journey-logo {
+            font-family: var(--mono);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: 0.02em;
+        }
+        .journey-logo span { color: var(--cyan); }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .journey-token-badge {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.25);
+            border-radius: 100px;
+            padding: 4px 12px;
+            color: var(--cyan);
+        }
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse-dot 2s ease infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { box-shadow: 0 0 4px var(--green); }
+            50% { box-shadow: 0 0 12px var(--green); }
+        }
+
+        /* --- Main Layout --- */
+        .journey-main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 0;
+            min-height: 0;
+        }
+
+        /* --- Video Panel (Left) --- */
+        .video-panel {
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            position: relative;
+        }
+        .video-wrap {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .video-wrap video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .video-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.6);
+            cursor: pointer;
+            transition: opacity 0.4s ease;
+            z-index: 2;
+        }
+        .video-overlay.hidden { opacity: 0; pointer-events: none; }
+        .video-play-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(0,240,255,0.15);
+            border: 2px solid var(--cyan);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 30px rgba(0,240,255,0.2);
+        }
+        .video-play-btn:hover {
+            background: rgba(0,240,255,0.25);
+            transform: scale(1.1);
+            box-shadow: 0 0 40px rgba(0,240,255,0.35);
+        }
+        .video-play-btn svg { margin-left: 4px; }
+
+        /* HUD overlay on video */
+        .video-hud {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            z-index: 1;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        .hud-progress {
+            flex: 1;
+            margin-right: 16px;
+        }
+        .hud-progress-label {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+        .hud-progress-bar {
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .hud-progress-fill {
+            height: 100%;
+            width: 25%;
+            background: linear-gradient(90deg, var(--cyan), #34d399);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .hud-gate {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--amber);
+            white-space: nowrap;
+        }
+        .video-error {
+            color: var(--red);
+            font-size: 0.8rem;
+            padding: 8px 20px;
+            background: var(--red-dim);
+            display: none;
+        }
+
+        /* --- Sidebar Panel (Right) --- */
+        .sidebar-panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--obsidian-light);
+            border-left: 1px solid var(--obsidian-border);
+            overflow: hidden;
+        }
+
+        /* Nitzutz Chat Area */
+        .nitzutz-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--obsidian-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nitzutz-title {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nitzutz-title::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan);
+        }
+        .nitzutz-chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-bubble {
+            max-width: 90%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            line-height: 1.55;
+        }
+        .chat-bubble.nitzutz {
+            background: var(--obsidian-card);
+            border: 1px solid var(--obsidian-border);
+            color: var(--text);
+            align-self: flex-start;
+            border-top-left-radius: 4px;
+        }
+        .chat-bubble.student {
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.2);
+            color: var(--cyan);
+            align-self: flex-end;
+            border-top-right-radius: 4px;
+        }
+
+        /* Chat Input */
+        .chat-input-area {
+            padding: 12px 16px;
+            border-top: 1px solid var(--obsidian-border);
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .chat-input {
+            flex: 1;
+            background: var(--obsidian-card);
+            border: 1px solid var(--obsidian-border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.85rem;
+            resize: none;
+            min-height: 40px;
+            max-height: 100px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .chat-input:focus { border-color: var(--cyan); }
+        .chat-input::placeholder { color: var(--text-muted); }
+        .chat-send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.25);
+            color: var(--cyan);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .chat-send-btn:hover {
+            background: rgba(0,240,255,0.25);
+            box-shadow: 0 0 12px rgba(0,240,255,0.2);
+        }
+
+        /* --- Rescue Button --- */
+        .rescue-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--amber-dim);
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: var(--amber);
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .rescue-btn:hover {
+            background: rgba(245,158,11,0.25);
+            box-shadow: 0 0 12px rgba(245,158,11,0.2);
+        }
+        .rescue-btn.active {
+            background: rgba(245,158,11,0.3);
+            animation: rescue-pulse 1s ease;
+        }
+        @keyframes rescue-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+            100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+        }
+
+        /* --- Gates Panel (bottom of sidebar) --- */
+        .gates-panel {
+            border-top: 1px solid var(--obsidian-border);
+            padding: 14px 16px;
+        }
+        .gates-title {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+        .gate-list { list-style: none; }
+        .gate-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        .gate-dot {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--obsidian-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        .gate-item.current .gate-dot {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+            color: var(--cyan);
+            box-shadow: 0 0 8px rgba(0,240,255,0.2);
+        }
+        .gate-item.current { color: var(--text); }
+        .gate-item.done .gate-dot {
+            border-color: var(--green);
+            background: var(--green-dim);
+            color: var(--green);
+        }
+        .gate-item.done { color: var(--text-dim); }
+
+        /* --- v10.0 Swarm Investment Feed --- */
+        .swarm-panel {
+            border-top: 1px solid var(--obsidian-border);
+            padding: 10px 16px;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .swarm-title {
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .swarm-roi-badge {
+            font-size: 0.55rem;
+            background: rgba(16,185,129,0.15);
+            color: var(--green);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .swarm-card {
+            background: var(--obsidian-card);
+            border: 1px solid var(--obsidian-border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+            animation: swarm-slide-in 0.4s ease-out;
+        }
+        .swarm-card:hover { border-color: rgba(0,240,255,0.25); }
+        @keyframes swarm-slide-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .swarm-card-source {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-family: var(--mono);
+        }
+        .swarm-card-content {
+            font-size: 0.78rem;
+            line-height: 1.4;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+        .swarm-invest-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid rgba(0,240,255,0.25);
+            color: var(--cyan);
+            padding: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+        .swarm-invest-btn:hover:not(:disabled) {
+            background: var(--cyan);
+            color: var(--obsidian);
+            box-shadow: 0 0 12px rgba(0,240,255,0.3);
+        }
+        .swarm-invest-btn:disabled {
+            opacity: 0.5;
+            border-color: var(--obsidian-border);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+        .swarm-empty {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 12px 0;
+        }
+
+        /* --- Gold Energy Flash (Insight Merged) --- */
+        @keyframes gold-flash-ring {
+            0% { box-shadow: 0 0 0 0 rgba(255,215,0,0.6), inset 0 0 20px rgba(255,215,0,0.3); }
+            40% { box-shadow: 0 0 40px 12px rgba(255,215,0,0.35), inset 0 0 30px rgba(255,215,0,0.15); }
+            100% { box-shadow: 0 0 0 0 rgba(255,215,0,0), inset 0 0 0 rgba(255,215,0,0); }
+        }
+        @keyframes gold-flash-bar {
+            0% { background: linear-gradient(90deg, var(--cyan), #34d399); }
+            30% { background: linear-gradient(90deg, #FFD700, #FFA500); }
+            100% { background: linear-gradient(90deg, var(--cyan), #34d399); }
+        }
+        .gold-flash .hud-progress-bar {
+            animation: gold-flash-ring 1.6s ease-out;
+            border-radius: 2px;
+        }
+        .gold-flash .hud-progress-fill {
+            animation: gold-flash-bar 1.6s ease-out;
+        }
+
+        /* Toast notification */
+        .insight-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,165,0,0.1));
+            border: 1px solid rgba(255,215,0,0.35);
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 0.82rem;
+            color: #FFD700;
+            font-family: var(--mono);
+            backdrop-filter: blur(12px);
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(-12px);
+            transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+            pointer-events: none;
+            max-width: 340px;
+        }
+        .insight-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Insight commit button in chat area */
+        .insight-commit-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,215,0,0.08);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 8px;
+            padding: 5px 10px;
+            color: rgba(255,215,0,0.7);
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .insight-commit-btn:hover {
+            background: rgba(255,215,0,0.15);
+            color: #FFD700;
+            border-color: rgba(255,215,0,0.4);
+        }
+
+        /* Active Probe (Nitzotz) styling */
+        .chat-bubble.probe {
+            background: linear-gradient(135deg, var(--obsidian-card), rgba(0,240,255,0.06));
+            border: 1px solid rgba(0,240,255,0.2);
+            color: var(--text);
+            align-self: flex-start;
+            border-top-left-radius: 4px;
+            position: relative;
+        }
+        .chat-bubble.probe::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: -5px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan);
+            animation: pulse-dot 2s ease infinite;
+        }
+
+        /* --- Chess Clock (Neural Bandwidth v8.0) --- */
+        .bandwidth-clock {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--cyan);
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0,240,255,0.2);
+            transition: all 0.4s ease;
+            white-space: nowrap;
+        }
+        .bandwidth-clock.low {
+            color: var(--amber);
+            background: var(--amber-dim);
+            border-color: rgba(245,158,11,0.3);
+            animation: clock-pulse-orange 1.5s ease infinite;
+        }
+        .bandwidth-clock.overtime {
+            color: var(--red);
+            background: var(--red-dim);
+            border-color: rgba(239,68,68,0.3);
+            animation: clock-pulse-red 1s ease infinite;
+        }
+        @keyframes clock-pulse-orange {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); }
+            50% { box-shadow: 0 0 8px 2px rgba(245,158,11,0.25); }
+        }
+        @keyframes clock-pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); opacity: 0.7; }
+            50% { box-shadow: 0 0 10px 3px rgba(239,68,68,0.2); opacity: 1; }
+        }
+        .bandwidth-clock svg {
+            flex-shrink: 0;
+        }
+
+        /* Bonus float animation */
+        .bandwidth-bonus-float {
+            position: absolute;
+            top: -8px;
+            right: 0;
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #FFD700;
+            pointer-events: none;
+            animation: bonus-float-up 1.8s cubic-bezier(0.16,1,0.3,1) forwards;
+            text-shadow: 0 0 8px rgba(255,215,0,0.5);
+            z-index: 10;
+        }
+        @keyframes bonus-float-up {
+            0% { opacity: 0; transform: translateY(0) scale(0.8); }
+            15% { opacity: 1; transform: translateY(-4px) scale(1.15); }
+            100% { opacity: 0; transform: translateY(-32px) scale(0.9); }
+        }
+
+        /* Soft nudge toast */
+        .bandwidth-nudge {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(245,158,11,0.06));
+            border: 1px solid rgba(245,158,11,0.25);
+            border-radius: 12px;
+            padding: 12px 18px;
+            font-size: 0.8rem;
+            color: var(--amber);
+            font-family: var(--font);
+            backdrop-filter: blur(12px);
+            z-index: 9998;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+            pointer-events: none;
+            max-width: 320px;
+        }
+        .bandwidth-nudge.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Macro Anomaly border pulse */
+        @keyframes macro-anomaly-border {
+            0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
+            50% { box-shadow: inset 0 0 30px rgba(255,87,34,0.12); }
+        }
+        body.macro-anomaly {
+            animation: macro-anomaly-border 2s ease infinite;
+        }
+
+        /* --- v12.1 Security HUD & Nuclear Protocol --- */
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            font-weight: 500;
+            color: var(--green);
+            letter-spacing: 0.04em;
+        }
+        .security-badge svg { flex-shrink: 0; }
+
+        /* Nuclear protocol overlay */
+        .protocol-overlay.nuclear {
+            background: rgba(20,0,0,0.92);
+        }
+        .nuclear-card {
+            background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(30,0,0,0.95));
+            border: 2px solid rgba(239,68,68,0.6);
+            border-radius: 16px;
+            padding: 40px 36px;
+            max-width: 440px;
+            text-align: center;
+            box-shadow: 0 0 80px rgba(239,68,68,0.2), inset 0 0 40px rgba(239,68,68,0.05);
+            animation: nuclear-pulse 1.5s ease infinite;
+        }
+        @keyframes nuclear-pulse {
+            0%, 100% { box-shadow: 0 0 60px rgba(239,68,68,0.15), inset 0 0 30px rgba(239,68,68,0.05); }
+            50% { box-shadow: 0 0 100px rgba(239,68,68,0.3), inset 0 0 50px rgba(239,68,68,0.1); }
+        }
+        .nuclear-card h2 {
+            font-family: var(--mono);
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--red);
+            margin-bottom: 12px;
+        }
+        .nuclear-card p {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+
+        /* VTC quality indicator */
+        .vtc-quality {
+            position: absolute;
+            bottom: 4px;
+            right: 6px;
+            font-family: var(--mono);
+            font-size: 0.45rem;
+            padding: 1px 4px;
+            border-radius: 3px;
+            background: rgba(0,0,0,0.5);
+            color: var(--green);
+        }
+        .vtc-quality.degraded { color: var(--amber); }
+        .vtc-quality.audio-only { color: var(--red); }
+
+        /* --- v9.7 Emergency Protocol Overlays --- */
+        .protocol-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        .protocol-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Intervention Overlay (Red/Dark glassmorphism) */
+        .protocol-overlay.intervention {
+            background: rgba(15,5,5,0.85);
+        }
+        .intervention-card {
+            background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(30,10,10,0.9));
+            border: 1px solid rgba(239,68,68,0.4);
+            border-radius: 16px;
+            padding: 40px 36px;
+            max-width: 440px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(239,68,68,0.15), inset 0 0 30px rgba(239,68,68,0.05);
+        }
+        .intervention-card h2 {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--red);
+            margin-bottom: 16px;
+        }
+        .intervention-card p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text);
+            margin-bottom: 24px;
+        }
+        .intervention-ack-btn {
+            background: var(--red-dim);
+            border: 1px solid rgba(239,68,68,0.4);
+            color: var(--red);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .intervention-ack-btn:hover {
+            background: rgba(239,68,68,0.25);
+            box-shadow: 0 0 16px rgba(239,68,68,0.25);
+        }
+
+        /* Hard Clear / Recalibration Overlay */
+        .protocol-overlay.hard-clear {
+            background: rgba(0,0,0,0.95);
+        }
+        .recalibration-ui {
+            text-align: center;
+        }
+        .recalibration-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(0,240,255,0.15);
+            border-top-color: var(--cyan);
+            border-radius: 50%;
+            animation: recal-spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes recal-spin {
+            to { transform: rotate(360deg); }
+        }
+        .recalibration-ui h2 {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--cyan);
+            margin-bottom: 8px;
+        }
+        .recalibration-ui p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        /* --- v11.0 WebRTC Video Grid --- */
+        .rtc-grid {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 3;
+        }
+        .rtc-frame {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid rgba(0,240,255,0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 0 rgba(0,240,255,0);
+            backdrop-filter: blur(4px);
+            background: rgba(15,23,42,0.6);
+            transition: border-color 0.4s, box-shadow 0.4s;
+        }
+        .rtc-frame.remote {
+            width: 200px;
+            height: 150px;
+        }
+        .rtc-frame.local {
+            width: 120px;
+            height: 90px;
+        }
+        .rtc-frame video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .rtc-frame-label {
+            position: absolute;
+            bottom: 4px;
+            left: 6px;
+            font-family: var(--mono);
+            font-size: 0.5rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            background: rgba(0,0,0,0.5);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        /* Active speaker aura */
+        .rtc-frame.speaking {
+            border-color: var(--cyan);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 16px rgba(0,240,255,0.25);
+        }
+        /* Hardware mute visual (overtime) */
+        .rtc-frame.muted-hw {
+            border-color: var(--red);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 12px rgba(239,68,68,0.15);
+            animation: rtc-mute-pulse 2s ease infinite;
+        }
+        @keyframes rtc-mute-pulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 8px rgba(239,68,68,0.1); }
+            50% { box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 16px rgba(239,68,68,0.25); }
+        }
+        .rtc-clock-overlay {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            font-weight: 600;
+            color: var(--cyan);
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            backdrop-filter: blur(4px);
+        }
+        .rtc-clock-overlay.low { color: var(--amber); }
+        .rtc-clock-overlay.overtime { color: var(--red); }
+        .rtc-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-family: var(--mono);
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            .journey-main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 50vh 1fr;
+            }
+            .sidebar-panel { border-left: none; border-top: 1px solid var(--obsidian-border); }
+            .insight-toast { left: 12px; right: 12px; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Gold Flash Toast -->
+<div class="insight-toast" id="insightToast"></div>
+<!-- Bandwidth Soft Nudge -->
+<div class="bandwidth-nudge" id="bandwidthNudge">Great energy! Consider leaving room for others to share.</div>
+
+<!-- v9.7 Emergency Protocol Overlays -->
+<div class="protocol-overlay intervention" id="interventionOverlay">
+    <div class="intervention-card">
+        <h2>Clinical Intervention Protocol</h2>
+        <p id="interventionReason">The supervising clinician has paused your session. Please wait for instructions.</p>
+        <button class="intervention-ack-btn" id="interventionAckBtn">Acknowledge Protocol</button>
+    </div>
+</div>
+
+<div class="protocol-overlay hard-clear" id="hardClearOverlay">
+    <div class="recalibration-ui">
+        <div class="recalibration-spinner"></div>
+        <h2>Recalibrating Environment</h2>
+        <p>Resetting neural parameters. Please stand by...</p>
+    </div>
+</div>
+
+<!-- v12.1 Nuclear Protocol (Session Hijack) -->
+<div class="protocol-overlay nuclear" id="nuclearOverlay">
+    <div class="nuclear-card">
+        <h2>Session Compromised</h2>
+        <p id="nuclearReason">A security anomaly has been detected. Your session has been frozen for protection. Contact your supervisor.</p>
+    </div>
+</div>
+
+<header class="journey-header">
+    <div class="journey-logo">RoTEM<span>:</span>MOXO</div>
+    <div class="header-right">
+        <div class="security-badge" title="End-to-end encrypted session">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            E2EE
+        </div>
+        <div class="journey-token-badge" id="tokenBadge">SESSION</div>
+        <div class="connection-dot" title="Connected"></div>
+    </div>
+</header>
+
+<main class="journey-main">
+    <!-- Left: Video Panel -->
+    <div class="video-panel">
+        <div class="video-wrap">
+            <video id="journeyVideo" preload="metadata" crossorigin="anonymous"
+                   playsinline controlsList="nodownload">
+            </video>
+            <div class="video-overlay" id="videoOverlay">
+                <button class="video-play-btn" id="videoPlayBtn" aria-label="Play video">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="var(--cyan)"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+            </div>
+            <!-- v11.0 WebRTC Video Grid -->
+            <div class="rtc-grid" id="rtcGrid">
+                <div class="rtc-frame remote" id="rtcRemoteFrame">
+                    <video id="remoteVideo" autoplay playsinline></video>
+                    <div class="rtc-placeholder" id="rtcRemotePlaceholder">Waiting for mentor...</div>
+                    <div class="rtc-frame-label">Mentor</div>
+                </div>
+                <div class="rtc-frame local" id="rtcLocalFrame">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div class="rtc-placeholder" id="rtcLocalPlaceholder">Camera off</div>
+                    <div class="rtc-frame-label">You</div>
+                    <div class="rtc-clock-overlay" id="rtcClockOverlay">3:00</div>
+                    <div class="vtc-quality" id="vtcQuality">HD</div>
+                </div>
+            </div>
+
+            <!-- HUD Overlay -->
+            <div class="video-hud">
+                <div class="hud-progress">
+                    <div class="hud-progress-label">Learning Energy</div>
+                    <div class="hud-progress-bar">
+                        <div class="hud-progress-fill" id="hudProgressFill"></div>
+                    </div>
+                </div>
+                <div class="hud-gate" id="hudGate">Gate 1/4</div>
+            </div>
+        </div>
+        <p class="video-error" id="videoError">Video could not be loaded. Please refresh or contact support.</p>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div class="sidebar-panel">
+        <!-- Nitzutz Header + Rescue Button -->
+        <div class="nitzutz-header" style="flex-wrap: wrap; gap: 8px;">
+            <div class="nitzutz-title">Nitzutz AI</div>
+            <div class="bandwidth-clock" id="bandwidthClock" style="position:relative;" title="Neural Bandwidth — time remaining on Live Neural Link">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span id="bandwidthTimer">3:00</span>
+            </div>
+            <button class="insight-commit-btn" id="insightCommitBtn" title="Commit a clinical insight to the Knowledge Base">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                Commit Insight
+            </button>
+            <button class="rescue-btn" id="rescueBtn" title="Reset context — tell Nitzutz to change perspective">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                Reset Focus
+            </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="nitzutz-chat" id="nitzutzChat">
+            <div class="chat-bubble nitzutz">
+                Welcome to your MOXO assessment journey. I'm Nitzutz, your AI clinical guide.
+                Watch the video segment and share what you observe &mdash; I'll help sharpen your analysis.
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area">
+            <textarea class="chat-input" id="chatInput" rows="1"
+                      placeholder="Type your observation..."></textarea>
+            <button class="chat-send-btn" id="chatSendBtn" aria-label="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+        </div>
+
+        <!-- v10.0 Swarm Investment Feed -->
+        <div class="swarm-panel" id="swarmPanel">
+            <div class="swarm-title">
+                <span>Swarm Investments</span>
+                <span class="swarm-roi-badge">ROI x3</span>
+            </div>
+            <div id="swarmFeed">
+                <div class="swarm-empty">No peer insights yet. Commit your own!</div>
+            </div>
+        </div>
+
+        <!-- Gates Progress -->
+        <div class="gates-panel">
+            <div class="gates-title">Assessment Gates</div>
+            <ul class="gate-list">
+                <li class="gate-item current" data-gate="1">
+                    <div class="gate-dot">1</div>
+                    <span>Orientation &amp; Consent</span>
+                </li>
+                <li class="gate-item" data-gate="2">
+                    <div class="gate-dot">2</div>
+                    <span>Hormonal Response</span>
+                </li>
+                <li class="gate-item" data-gate="3">
+                    <div class="gate-dot">3</div>
+                    <span>MOXO Performance Test</span>
+                </li>
+                <li class="gate-item" data-gate="4">
+                    <div class="gate-dot">4</div>
+                    <span>AI Analysis &amp; Feedback</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</main>
+
+<script>
+(function () {
+    'use strict';
+
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+    var badge = document.getElementById('tokenBadge');
+    if (token && badge) badge.textContent = token;
+
+    // --- R2 CDN Media ---
+    var R2_BASE = 'https://pub-59bba3fd2d1946dd8a44c75f41803059.r2.dev';
+
+    function normaliseMediaUrl(raw) {
+        if (!raw) return raw;
+        var s = raw.trim();
+        if (/^https?:\/\//i.test(s) && !/127\.0\.0\.1|localhost/i.test(s)) return s;
+        var localMatch = s.match(/^https?:\/\/(?:127\.0\.0\.1|localhost)(?::(\d+))?(\/.*)/i);
+        if (localMatch) return R2_BASE + localMatch[2];
+        if (s.charAt(0) === '/') return R2_BASE + s;
+        return s;
+    }
+
+    // --- Video ---
+    var video = document.getElementById('journeyVideo');
+    var overlay = document.getElementById('videoOverlay');
+    var playBtn = document.getElementById('videoPlayBtn');
+    var errorEl = document.getElementById('videoError');
+
+    function loadVideo(rawUrl) {
+        if (!video || !rawUrl) return;
+        video.src = normaliseMediaUrl(rawUrl);
+        video.load();
+    }
+
+    if (video) {
+        video.addEventListener('error', function () { if (errorEl) errorEl.style.display = 'block'; });
+        video.addEventListener('loadedmetadata', function () { if (errorEl) errorEl.style.display = 'none'; });
+    }
+
+    if (playBtn && video && overlay) {
+        playBtn.addEventListener('click', function () {
+            if (!video.src || video.src === window.location.href) loadVideo('/quarry/moxo_intro.mp4');
+            video.play().then(function () {
+                overlay.classList.add('hidden');
+                video.setAttribute('controls', '');
+            }).catch(function () { if (errorEl) errorEl.style.display = 'block'; });
+        });
+        video.addEventListener('ended', function () { overlay.classList.remove('hidden'); });
+    }
+
+    // --- Chat ---
+    var chatEl = document.getElementById('nitzutzChat');
+    var chatInput = document.getElementById('chatInput');
+    var chatSendBtn = document.getElementById('chatSendBtn');
+
+    function addBubble(text, who) {
+        var div = document.createElement('div');
+        div.className = 'chat-bubble ' + who;
+        div.innerHTML = text;
+        chatEl.appendChild(div);
+        chatEl.scrollTop = chatEl.scrollHeight;
+        return div;
+    }
+
+    function sendMessage() {
+        var msg = chatInput.value.trim();
+        if (!msg) return;
+        addBubble(msg, 'student');
+        chatInput.value = '';
+
+        // Send to orchestrator via proxy
+        fetch('/proxy/9995/orchestrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'evaluate-gate',
+                student_input: msg,
+                token: token,
+                timestamp: video ? video.currentTime : 0
+            })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            addBubble(data.feedback || data.message || 'Processing...', 'nitzutz');
+        })
+        .catch(function () {
+            addBubble('Connection interrupted. Please try again.', 'nitzutz');
+        });
+    }
+
+    if (chatSendBtn) chatSendBtn.addEventListener('click', sendMessage);
+    if (chatInput) chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    // --- Rescue Button ---
+    var rescueBtn = document.getElementById('rescueBtn');
+    if (rescueBtn) {
+        rescueBtn.addEventListener('click', function () {
+            rescueBtn.classList.add('active');
+            setTimeout(function () { rescueBtn.classList.remove('active'); }, 1000);
+
+            addBubble('<em>Requesting context reset...</em>', 'student');
+
+            fetch('/api/system/rescue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: token,
+                    video_timestamp: video ? video.currentTime : 0
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                addBubble(
+                    data.message ||
+                    'Got it. Resetting clinical focus. Let\u2019s look at this segment again from a new perspective\u2026',
+                    'nitzutz'
+                );
+            })
+            .catch(function () {
+                addBubble(
+                    'Got it. Resetting clinical focus. Let\u2019s look at this segment again from a new perspective\u2026',
+                    'nitzutz'
+                );
+            });
+        });
+    }
+
+    // =========================================================
+    // v7.0 — Knowledge Engine (Clinical Git) + Sensor Fusion
+    // =========================================================
+
+    var insightToast = document.getElementById('insightToast');
+    var insightCommitBtn = document.getElementById('insightCommitBtn');
+
+    // --- Chess Clock (Neural Bandwidth v8.0) ---
+    var bandwidthClock = document.getElementById('bandwidthClock');
+    var bandwidthTimer = document.getElementById('bandwidthTimer');
+    var bandwidthNudge = document.getElementById('bandwidthNudge');
+    var currentBandwidthMs = 180000;
+    var nudgeShown = false;
+
+    function formatBandwidth(ms) {
+        var negative = ms < 0;
+        var abs = Math.abs(ms);
+        var totalSec = Math.ceil(abs / 1000);
+        var min = Math.floor(totalSec / 60);
+        var sec = totalSec % 60;
+        return (negative ? '-' : '') + min + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    function updateClockUI(ms) {
+        currentBandwidthMs = ms;
+        if (bandwidthTimer) bandwidthTimer.textContent = formatBandwidth(ms);
+        if (!bandwidthClock) return;
+        bandwidthClock.classList.remove('low', 'overtime');
+        if (ms <= 0) {
+            bandwidthClock.classList.add('overtime');
+            // Show soft nudge once
+            if (!nudgeShown && bandwidthNudge) {
+                nudgeShown = true;
+                bandwidthNudge.classList.add('show');
+                setTimeout(function () { bandwidthNudge.classList.remove('show'); }, 6000);
+            }
+        } else if (ms <= 30000) {
+            bandwidthClock.classList.add('low');
+        }
+    }
+
+    function showBonusAnimation(bonusMs) {
+        if (!bandwidthClock) return;
+        var bonusSec = Math.round(bonusMs / 1000);
+        var floater = document.createElement('span');
+        floater.className = 'bandwidth-bonus-float';
+        floater.textContent = '+' + Math.floor(bonusSec / 60) + ':' + (bonusSec % 60 < 10 ? '0' : '') + (bonusSec % 60);
+        bandwidthClock.appendChild(floater);
+        setTimeout(function () { if (floater.parentNode) floater.parentNode.removeChild(floater); }, 2000);
+    }
+
+    // --- Gold Energy Flash ---
+    function triggerGoldFlash(message, bonusMs) {
+        // Flash the HUD progress ring
+        var videoPanel = document.querySelector('.video-panel');
+        if (videoPanel) {
+            videoPanel.classList.add('gold-flash');
+            setTimeout(function () { videoPanel.classList.remove('gold-flash'); }, 1800);
+        }
+
+        // Show toast
+        if (insightToast) {
+            insightToast.textContent = message || 'Clinical Insight Verified & Merged into RoTEM Base.';
+            insightToast.classList.add('show');
+            setTimeout(function () { insightToast.classList.remove('show'); }, 4000);
+        }
+
+        // Show bonus time animation on the chess clock
+        if (bonusMs && bonusMs > 0) {
+            showBonusAnimation(bonusMs);
+        }
+    }
+
+    // --- Insight Commit (Silent) ---
+    if (insightCommitBtn) {
+        insightCommitBtn.addEventListener('click', function () {
+            // Get the last student message as insight content
+            var studentBubbles = chatEl.querySelectorAll('.chat-bubble.student');
+            var lastBubble = studentBubbles[studentBubbles.length - 1];
+            var content = lastBubble ? lastBubble.textContent.trim() : '';
+
+            if (!content || content === 'Requesting context reset...') {
+                addBubble('Share an observation first, then commit it as a clinical insight.', 'nitzutz');
+                return;
+            }
+
+            // Silent commit — no loading spinner for the student
+            fetch('/api/knowledge/commit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: token,
+                    content: content,
+                    video_timestamp: video ? video.currentTime : 0
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.status === 'ok') {
+                    // Subtle confirmation — no intrusive UI
+                    insightCommitBtn.style.borderColor = 'rgba(255,215,0,0.5)';
+                    insightCommitBtn.style.color = '#FFD700';
+                    setTimeout(function () {
+                        insightCommitBtn.style.borderColor = '';
+                        insightCommitBtn.style.color = '';
+                    }, 1500);
+                }
+            })
+            .catch(function () { /* Silent fail — no disruption */ });
+        });
+    }
+
+    // --- SSE Event Stream (v7.0 Real-Time Pipeline) ---
+    var sseUrl = '/api/events';
+    if (token) sseUrl += '?token=' + encodeURIComponent(token);
+    var eventSource = null;
+
+    function connectSSE() {
+        if (eventSource) { try { eventSource.close(); } catch (e) {} }
+        eventSource = new EventSource(sseUrl);
+
+        eventSource.addEventListener('INSIGHT_MERGED', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                triggerGoldFlash(
+                    data.message || 'Clinical Insight Verified & Merged into RoTEM Base.',
+                    data.bandwidth_bonus_ms || 0
+                );
+            } catch (err) {
+                triggerGoldFlash();
+            }
+        });
+
+        eventSource.addEventListener('BANDWIDTH_UPDATE', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                updateClockUI(data.bandwidth_ms);
+                if (data.bonus_ms && data.bonus_ms > 0) {
+                    showBonusAnimation(data.bonus_ms);
+                    // Reset nudge flag if back above zero
+                    if (data.bandwidth_ms > 0) nudgeShown = false;
+                }
+            } catch (err) {}
+        });
+
+        // v10.0 — Swarm Investor Feed
+        eventSource.addEventListener('INSIGHT_COMMITTED', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                // Don't show the student's own insights
+                if (data.student_id === token) return;
+                addSwarmCard(data);
+            } catch (err) {}
+        });
+
+        // v9.7 — Emergency Protocol SSE listeners
+        eventSource.addEventListener('INTERVENTION_TRIGGERED', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                var overlay = document.getElementById('interventionOverlay');
+                var reasonEl = document.getElementById('interventionReason');
+                if (reasonEl && data.reason) reasonEl.textContent = data.reason;
+                if (overlay) overlay.classList.add('active');
+                // Pause video
+                if (video && !video.paused) video.pause();
+            } catch (err) {}
+        });
+
+        eventSource.addEventListener('HARD_CLEAR', function (e) {
+            var overlay = document.getElementById('hardClearOverlay');
+            if (overlay) overlay.classList.add('active');
+            // Pause video
+            if (video && !video.paused) video.pause();
+            // Force reload after recalibration animation
+            setTimeout(function () {
+                window.location.reload();
+            }, 3500);
+        });
+
+        eventSource.addEventListener('ACTIVE_PROBE', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                // Render as conversational Nitzutz probe — NOT as a test
+                addBubble(data.question || data.message, 'probe');
+            } catch (err) {}
+        });
+
+        eventSource.addEventListener('MACRO_ANOMALY', function (e) {
+            // This event is primarily for the Command Deck (Ofer),
+            // but we also add a subtle border pulse on the student UI
+            document.body.classList.add('macro-anomaly');
+            setTimeout(function () { document.body.classList.remove('macro-anomaly'); }, 6000);
+        });
+
+        eventSource.addEventListener('ENERGY_UPDATE', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                var fill = document.getElementById('hudProgressFill');
+                if (fill && data.energy != null) {
+                    fill.style.width = Math.min(100, Math.max(0, data.energy)) + '%';
+                }
+                if (data.gate) {
+                    var gateEl = document.getElementById('hudGate');
+                    if (gateEl) gateEl.textContent = 'Gate ' + data.gate + '/4';
+                }
+            } catch (err) {}
+        });
+
+        eventSource.onerror = function () {
+            // Reconnect after 5s on connection loss
+            eventSource.close();
+            setTimeout(connectSSE, 5000);
+        };
+    }
+
+    connectSSE();
+
+    // --- Passive Sensor Telemetry (Sensor Fusion Input) ---
+    var sensorState = {
+        mousePositions: [],
+        lastMouseTime: 0,
+        keyPresses: [],
+        lastKeyTime: 0,
+        focusLost: false,
+        isVoiceActive: false  // Set by Neural Link mic integration
+    };
+
+    // Expose so Gemini's Neural Link can flag voice activity
+    window.RoTEM_setVoiceActive = function (active) {
+        sensorState.isVoiceActive = !!active;
+    };
+
+    // Track mouse dynamics
+    document.addEventListener('mousemove', function (e) {
+        var now = Date.now();
+        sensorState.mousePositions.push({ x: e.clientX, y: e.clientY, t: now });
+        // Keep last 50 samples
+        if (sensorState.mousePositions.length > 50) sensorState.mousePositions.shift();
+        sensorState.lastMouseTime = now;
+    });
+
+    // Track typing cadence
+    if (chatInput) {
+        chatInput.addEventListener('keydown', function () {
+            var now = Date.now();
+            sensorState.keyPresses.push(now);
+            if (sensorState.keyPresses.length > 30) sensorState.keyPresses.shift();
+            sensorState.lastKeyTime = now;
+        });
+    }
+
+    // Track focus/blur
+    document.addEventListener('visibilitychange', function () {
+        sensorState.focusLost = document.hidden;
+    });
+
+    // Classify mouse dynamics
+    function classifyMouseDynamics() {
+        var pts = sensorState.mousePositions;
+        if (pts.length < 5) return 'idle';
+        var totalDist = 0;
+        var dirChanges = 0;
+        for (var i = 1; i < pts.length; i++) {
+            var dx = pts[i].x - pts[i-1].x;
+            var dy = pts[i].y - pts[i-1].y;
+            totalDist += Math.sqrt(dx*dx + dy*dy);
+            if (i > 1) {
+                var pdx = pts[i-1].x - pts[i-2].x;
+                var pdy = pts[i-1].y - pts[i-2].y;
+                if ((dx * pdx + dy * pdy) < 0) dirChanges++;
+            }
+        }
+        var avgSpeed = totalDist / pts.length;
+        if (avgSpeed < 2) return 'idle';
+        if (dirChanges > pts.length * 0.4) return 'erratic';
+        return 'fluid';
+    }
+
+    // Classify typing cadence
+    function classifyTypingCadence() {
+        var keys = sensorState.keyPresses;
+        if (keys.length < 3) return 'idle';
+        var intervals = [];
+        for (var i = 1; i < keys.length; i++) intervals.push(keys[i] - keys[i-1]);
+        var avg = intervals.reduce(function (a, b) { return a + b; }, 0) / intervals.length;
+        var variance = intervals.reduce(function (a, b) { return a + (b - avg) * (b - avg); }, 0) / intervals.length;
+        if (Math.sqrt(variance) > avg * 0.6) return 'hesitant';
+        return 'rhythmic';
+    }
+
+    // Send telemetry every 10 seconds
+    setInterval(function () {
+        var idle = Date.now() - sensorState.lastMouseTime > 8000;
+        var telemetry = {
+            token: token,
+            video_timestamp: video ? video.currentTime : 0,
+            camera_state: sensorState.focusLost ? 'zoning_out' : 'focused',
+            mouse_dynamics: idle ? 'idle' : classifyMouseDynamics(),
+            typing_cadence: classifyTypingCadence(),
+            tab_visible: !document.hidden,
+            isVoiceActive: sensorState.isVoiceActive
+        };
+
+        fetch('/api/telemetry/sensor-fusion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telemetry)
+        }).catch(function () { /* silent */ });
+    }, 10000);
+
+    // --- v10.0 Swarm Investment Feed ---
+    var swarmFeed = document.getElementById('swarmFeed');
+    var swarmHasCards = false;
+
+    function addSwarmCard(data) {
+        // Clear empty message on first card
+        if (!swarmHasCards) {
+            swarmFeed.innerHTML = '';
+            swarmHasCards = true;
+        }
+
+        var card = document.createElement('div');
+        card.className = 'swarm-card';
+        card.dataset.insightId = data.insight_id;
+
+        var source = document.createElement('div');
+        source.className = 'swarm-card-source';
+        source.textContent = data.student_id || 'Peer';
+
+        var content = document.createElement('div');
+        content.className = 'swarm-card-content';
+        content.textContent = '"' + (data.content || '...') + '"';
+
+        var btn = document.createElement('button');
+        btn.className = 'swarm-invest-btn';
+        btn.innerHTML = 'Invest 30s &#x1F48E;';
+        btn.addEventListener('click', function () {
+            investInInsight(data.insight_id, btn);
+        });
+
+        card.appendChild(source);
+        card.appendChild(content);
+        card.appendChild(btn);
+        swarmFeed.insertBefore(card, swarmFeed.firstChild);
+
+        // Keep feed to 10 cards max
+        while (swarmFeed.children.length > 10) {
+            swarmFeed.removeChild(swarmFeed.lastChild);
+        }
+    }
+
+    function investInInsight(insightId, btn) {
+        btn.disabled = true;
+        btn.textContent = 'Investing...';
+
+        fetch('/api/knowledge/invest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token: token,
+                insight_id: insightId,
+                amount_ms: 30000
+            })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.status === 'ok') {
+                btn.textContent = 'Invested!';
+                btn.style.borderColor = 'rgba(255,215,0,0.4)';
+                btn.style.color = '#FFD700';
+                // Subtle clock shrink animation
+                if (bandwidthClock) {
+                    bandwidthClock.style.transform = 'scale(0.9)';
+                    setTimeout(function () { bandwidthClock.style.transform = ''; }, 200);
+                }
+            } else {
+                btn.textContent = data.error || 'Failed';
+                setTimeout(function () {
+                    btn.textContent = 'Invest 30s';
+                    btn.disabled = false;
+                }, 2000);
+            }
+        })
+        .catch(function () {
+            btn.textContent = 'Offline';
+            setTimeout(function () {
+                btn.textContent = 'Invest 30s';
+                btn.disabled = false;
+            }, 2000);
+        });
+    }
+
+    // --- Intervention Acknowledge ---
+    var interventionAckBtn = document.getElementById('interventionAckBtn');
+    if (interventionAckBtn) {
+        interventionAckBtn.addEventListener('click', function () {
+            var overlay = document.getElementById('interventionOverlay');
+            if (overlay) overlay.classList.remove('active');
+            addBubble('Session resumed. The clinician has cleared you to continue.', 'nitzutz');
+        });
+    }
+
+    // =========================================================
+    // v11.0 — WebRTC Clinical VTC + Hardware Kill Switch
+    // =========================================================
+
+    var localVideo = document.getElementById('localVideo');
+    var remoteVideo = document.getElementById('remoteVideo');
+    var rtcLocalFrame = document.getElementById('rtcLocalFrame');
+    var rtcRemoteFrame = document.getElementById('rtcRemoteFrame');
+    var rtcLocalPlaceholder = document.getElementById('rtcLocalPlaceholder');
+    var rtcRemotePlaceholder = document.getElementById('rtcRemotePlaceholder');
+    var rtcClockOverlay = document.getElementById('rtcClockOverlay');
+
+    var localStream = null;
+    var peerConnection = null;
+    var rtcConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    // Initialize local media
+    function initLocalMedia() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(function (stream) {
+            localStream = stream;
+            if (localVideo) {
+                localVideo.srcObject = stream;
+                if (rtcLocalPlaceholder) rtcLocalPlaceholder.style.display = 'none';
+            }
+            // Flag voice active for sensor fusion
+            window.RoTEM_setVoiceActive(true);
+            // Start audio analyzer for active speaker aura
+            startAudioAnalyzer(stream);
+            // Initialize peer connection
+            initPeerConnection();
+        })
+        .catch(function (err) {
+            console.warn('RoTEM: Camera/mic access denied:', err.name);
+            if (rtcLocalPlaceholder) rtcLocalPlaceholder.textContent = 'No camera';
+        });
+    }
+
+    // Audio level analyzer for active speaker aura
+    function startAudioAnalyzer(stream) {
+        try {
+            var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            var analyser = audioCtx.createAnalyser();
+            var source = audioCtx.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+            var dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            function checkLevel() {
+                analyser.getByteFrequencyData(dataArray);
+                var sum = 0;
+                for (var i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                var avg = sum / dataArray.length;
+
+                if (rtcLocalFrame) {
+                    if (avg > 20 && !rtcLocalFrame.classList.contains('muted-hw')) {
+                        rtcLocalFrame.classList.add('speaking');
+                    } else {
+                        rtcLocalFrame.classList.remove('speaking');
+                    }
+                }
+                requestAnimationFrame(checkLevel);
+            }
+            checkLevel();
+        } catch (e) { /* AudioContext not supported */ }
+    }
+
+    // Peer connection setup
+    function initPeerConnection() {
+        if (!localStream) return;
+
+        peerConnection = new RTCPeerConnection(rtcConfig);
+
+        // Add local tracks
+        localStream.getTracks().forEach(function (track) {
+            peerConnection.addTrack(track, localStream);
+        });
+
+        // Handle remote stream
+        peerConnection.ontrack = function (event) {
+            if (remoteVideo && event.streams && event.streams[0]) {
+                remoteVideo.srcObject = event.streams[0];
+                if (rtcRemotePlaceholder) rtcRemotePlaceholder.style.display = 'none';
+            }
+        };
+
+        // ICE candidates → send to signaling server
+        peerConnection.onicecandidate = function (event) {
+            if (event.candidate) {
+                fetch('/api/webrtc/ice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sender_id: token,
+                        target_id: 'architect',
+                        data: event.candidate.toJSON()
+                    })
+                }).catch(function () {});
+            }
+        };
+
+        peerConnection.onconnectionstatechange = function () {
+            if (peerConnection.connectionState === 'connected') {
+                if (rtcRemotePlaceholder) rtcRemotePlaceholder.style.display = 'none';
+            }
+        };
+    }
+
+    // Handle incoming signaling via SSE
+    if (eventSource) {
+        eventSource.addEventListener('WEBRTC_OFFER', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.target_id !== token && data.target_id !== 'all') return;
+                if (!peerConnection) initPeerConnection();
+                peerConnection.setRemoteDescription(new RTCSessionDescription(data.data))
+                .then(function () { return peerConnection.createAnswer(); })
+                .then(function (answer) { return peerConnection.setLocalDescription(answer); })
+                .then(function () {
+                    fetch('/api/webrtc/answer', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            sender_id: token,
+                            target_id: data.sender_id,
+                            data: peerConnection.localDescription.toJSON()
+                        })
+                    });
+                });
+            } catch (err) {}
+        });
+
+        eventSource.addEventListener('WEBRTC_ANSWER', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.target_id !== token) return;
+                if (peerConnection) {
+                    peerConnection.setRemoteDescription(new RTCSessionDescription(data.data));
+                }
+            } catch (err) {}
+        });
+
+        eventSource.addEventListener('WEBRTC_ICE', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.target_id !== token && data.target_id !== 'all') return;
+                if (peerConnection) {
+                    peerConnection.addIceCandidate(new RTCIceCandidate(data.data));
+                }
+            } catch (err) {}
+        });
+
+        // v11.0 Hardware Kill Switch
+        eventSource.addEventListener('AUDIO_KILL_SWITCH', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.studentId !== token) return;
+                enforceAudioMute(data.mute);
+            } catch (err) {}
+        });
+    }
+
+    // Hardware-level audio mute/unmute
+    function enforceAudioMute(shouldMute) {
+        if (!localStream) return;
+        var audioTracks = localStream.getAudioTracks();
+        for (var i = 0; i < audioTracks.length; i++) {
+            audioTracks[i].enabled = !shouldMute;
+        }
+        // Update visual state
+        if (rtcLocalFrame) {
+            if (shouldMute) {
+                rtcLocalFrame.classList.add('muted-hw');
+                rtcLocalFrame.classList.remove('speaking');
+            } else {
+                rtcLocalFrame.classList.remove('muted-hw');
+            }
+        }
+        window.RoTEM_setVoiceActive(!shouldMute);
+    }
+
+    // Update clock overlay on local video frame
+    var _origUpdateClockUI = updateClockUI;
+    updateClockUI = function (ms) {
+        _origUpdateClockUI(ms);
+        if (rtcClockOverlay) {
+            rtcClockOverlay.textContent = formatBandwidth(ms);
+            rtcClockOverlay.classList.remove('low', 'overtime');
+            if (ms <= 0) rtcClockOverlay.classList.add('overtime');
+            else if (ms <= 30000) rtcClockOverlay.classList.add('low');
+        }
+        // Hardware enforce: mute audio at 0
+        if (ms <= 0) {
+            enforceAudioMute(true);
+        }
+    };
+
+    // v12.1 — VTC Quality Monitor (Dynamic Throttling)
+    var vtcQualityEl = document.getElementById('vtcQuality');
+    var videoTrackEnabled = true;
+
+    function monitorVTCQuality() {
+        if (!peerConnection) return;
+        peerConnection.getStats(null).then(function (stats) {
+            stats.forEach(function (report) {
+                if (report.type === 'outbound-rtp' && report.kind === 'video') {
+                    var packetsSent = report.packetsSent || 0;
+                    var packetsLost = report.packetsLost || 0;
+                    if (packetsSent > 0) {
+                        var lossRate = packetsLost / (packetsSent + packetsLost);
+                        if (lossRate > 0.05 && videoTrackEnabled) {
+                            // Auto-downgrade: disable video to preserve audio
+                            var videoTracks = localStream ? localStream.getVideoTracks() : [];
+                            for (var i = 0; i < videoTracks.length; i++) {
+                                videoTracks[i].enabled = false;
+                            }
+                            videoTrackEnabled = false;
+                            if (vtcQualityEl) {
+                                vtcQualityEl.textContent = 'Audio Only';
+                                vtcQualityEl.className = 'vtc-quality audio-only';
+                            }
+                        } else if (lossRate <= 0.02 && !videoTrackEnabled) {
+                            // Re-enable video when quality improves
+                            var videoTracks2 = localStream ? localStream.getVideoTracks() : [];
+                            for (var j = 0; j < videoTracks2.length; j++) {
+                                videoTracks2[j].enabled = true;
+                            }
+                            videoTrackEnabled = true;
+                            if (vtcQualityEl) {
+                                vtcQualityEl.textContent = 'HD';
+                                vtcQualityEl.className = 'vtc-quality';
+                            }
+                        } else if (lossRate > 0.02 && lossRate <= 0.05) {
+                            if (vtcQualityEl) {
+                                vtcQualityEl.textContent = 'SD';
+                                vtcQualityEl.className = 'vtc-quality degraded';
+                            }
+                        }
+                    }
+                }
+            });
+        }).catch(function () {});
+    }
+
+    // Poll connection stats every 3 seconds
+    setInterval(monitorVTCQuality, 3000);
+
+    // v12.1 — NUCLEAR_PROTOCOL SSE listener
+    if (eventSource) {
+        eventSource.addEventListener('NUCLEAR_PROTOCOL', function (e) {
+            try {
+                var data = JSON.parse(e.data);
+                if (data.studentId && data.studentId !== token) return;
+                var overlay = document.getElementById('nuclearOverlay');
+                var reasonEl = document.getElementById('nuclearReason');
+                if (reasonEl && data.reason) reasonEl.textContent = data.reason;
+                if (overlay) overlay.classList.add('active');
+                // Freeze everything
+                if (video && !video.paused) video.pause();
+                enforceAudioMute(true);
+                // Disable video tracks
+                if (localStream) {
+                    localStream.getTracks().forEach(function (t) { t.enabled = false; });
+                }
+                // Close peer connection
+                if (peerConnection) {
+                    try { peerConnection.close(); } catch (e2) {}
+                    peerConnection = null;
+                }
+            } catch (err) {}
+        });
+    }
+
+    // Auto-init camera on page load
+    initLocalMedia();
+
+    // --- External integrations ---
+    window.addEventListener('message', function (e) {
+        if (e.data && e.data.type === 'rotem-video' && e.data.url) loadVideo(e.data.url);
+    });
+    if (video && video.dataset.src) loadVideo(video.dataset.src);
+    window.RoTEM_loadVideo = loadVideo;
+    window.RoTEM_normaliseMediaUrl = normaliseMediaUrl;
+    window.RoTEM_triggerGoldFlash = triggerGoldFlash;
+    window.RoTEM_enforceAudioMute = enforceAudioMute;
+    window.RoTEM_initLocalMedia = initLocalMedia;
+})();
+</script>
+</body>
+</html>

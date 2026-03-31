@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <title>RoTEM Assessment Report</title>
+    <style>
+        /* Report PDF Template — RoTEM International Branding */
+
+        @page {
+            size: A4;
+            margin: 20mm 18mm 25mm 18mm;
+
+            @top-center {
+                content: "RoTEM Academy — MOXO Assessment Report";
+                font-family: 'Inter', Arial, sans-serif;
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Inter', Arial, sans-serif;
+                font-size: 8pt;
+                color: #94a3b8;
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.6;
+            color: #1e293b;
+        }
+
+        /* --- Report Header / Cover --- */
+        .report-header {
+            text-align: center;
+            padding: 40px 0 30px;
+            border-bottom: 3px solid #1a56db;
+            margin-bottom: 30px;
+        }
+
+        .report-logo {
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+
+        .report-logo-text {
+            font-size: 28pt;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .report-logo-accent {
+            color: #1a56db;
+        }
+
+        .report-subtitle {
+            font-size: 14pt;
+            font-weight: 300;
+            color: #64748b;
+            margin-top: 6px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .report-title {
+            font-size: 20pt;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 24px;
+        }
+
+        .report-meta {
+            margin-top: 16px;
+            font-size: 9.5pt;
+            color: #64748b;
+        }
+
+        .report-meta table {
+            margin: 0 auto;
+            border-collapse: collapse;
+        }
+
+        .report-meta td {
+            padding: 3px 12px;
+            text-align: left;
+        }
+
+        .report-meta .label {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        /* --- Accreditation Strip --- */
+        .accreditation-strip {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            padding: 16px 0;
+            margin-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .accreditation-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 8pt;
+            color: #64748b;
+        }
+
+        .accreditation-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e8f0fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12pt;
+            color: #1a56db;
+        }
+
+        /* --- Section Styles --- */
+        .section {
+            margin-bottom: 24px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 13pt;
+            font-weight: 700;
+            color: #1a56db;
+            border-bottom: 2px solid #e8f0fe;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        .section-content {
+            font-size: 10.5pt;
+            color: #334155;
+            line-height: 1.65;
+        }
+
+        /* --- Score Table --- */
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 10pt;
+        }
+
+        .score-table th {
+            background: #1a56db;
+            color: #fff;
+            font-weight: 600;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .score-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .score-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        .score-table .score-highlight {
+            font-weight: 700;
+            color: #1a56db;
+        }
+
+        /* --- AI Analysis Badge --- */
+        .ai-analysis-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #e8f0fe, #dbeafe);
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 8.5pt;
+            font-weight: 600;
+            color: #1a56db;
+            margin-bottom: 12px;
+        }
+
+        /* --- Clinical Notes --- */
+        .clinical-note {
+            background: #f8fafc;
+            border-left: 3px solid #1a56db;
+            padding: 12px 16px;
+            margin: 12px 0;
+            font-size: 10pt;
+            color: #334155;
+        }
+
+        .clinical-note strong {
+            color: #0f172a;
+        }
+
+        /* --- Report Footer --- */
+        .report-footer {
+            margin-top: 40px;
+            padding-top: 16px;
+            border-top: 2px solid #e2e8f0;
+            font-size: 8.5pt;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        .report-footer p {
+            margin-bottom: 4px;
+        }
+
+        .report-footer .confidential {
+            font-weight: 600;
+            color: #ef4444;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        /* --- Template Placeholders --- */
+        /* In production, these are replaced by the Report Writer (port 9990) */
+        .placeholder {
+            color: #9333ea;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Report Header -->
+<div class="report-header">
+    <div class="report-logo">
+        <!-- Replace with actual logo image in production -->
+        <div class="report-logo-text">RoTEM<span class="report-logo-accent">Academy</span></div>
+    </div>
+    <div class="report-subtitle">MOXO Assessment Report</div>
+
+    <div class="report-title">Comprehensive ADHD Assessment</div>
+
+    <div class="report-meta">
+        <table>
+            <tr>
+                <td class="label">Client:</td>
+                <td class="placeholder">{{client_name}}</td>
+            </tr>
+            <tr>
+                <td class="label">Date of Birth:</td>
+                <td class="placeholder">{{client_dob}}</td>
+            </tr>
+            <tr>
+                <td class="label">Assessment Date:</td>
+                <td class="placeholder">{{assessment_date}}</td>
+            </tr>
+            <tr>
+                <td class="label">Report ID:</td>
+                <td class="placeholder">{{report_id}}</td>
+            </tr>
+            <tr>
+                <td class="label">Clinician:</td>
+                <td class="placeholder">{{clinician_name}}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="accreditation-strip">
+        <div class="accreditation-item">
+            <div class="accreditation-badge">&#9878;</div>
+            <span>Israeli MoH Recognised</span>
+        </div>
+        <div class="accreditation-item">
+            <div class="accreditation-badge">&#9733;</div>
+            <span>MOXO Certified Centre</span>
+        </div>
+        <div class="accreditation-item">
+            <div class="accreditation-badge">&#128274;</div>
+            <span>GDPR Compliant</span>
+        </div>
+    </div>
+</div>
+
+<!-- MOXO Scores Section -->
+<div class="section">
+    <h2 class="section-title">1. MOXO Performance Scores</h2>
+    <div class="section-content">
+        <table class="score-table">
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>Raw Score</th>
+                    <th>Scaled Score</th>
+                    <th>Percentile</th>
+                    <th>Classification</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Attention</td>
+                    <td class="placeholder">{{attention_raw}}</td>
+                    <td class="placeholder">{{attention_scaled}}</td>
+                    <td class="placeholder score-highlight">{{attention_percentile}}</td>
+                    <td class="placeholder">{{attention_class}}</td>
+                </tr>
+                <tr>
+                    <td>Timing</td>
+                    <td class="placeholder">{{timing_raw}}</td>
+                    <td class="placeholder">{{timing_scaled}}</td>
+                    <td class="placeholder score-highlight">{{timing_percentile}}</td>
+                    <td class="placeholder">{{timing_class}}</td>
+                </tr>
+                <tr>
+                    <td>Impulsivity</td>
+                    <td class="placeholder">{{impulsivity_raw}}</td>
+                    <td class="placeholder">{{impulsivity_scaled}}</td>
+                    <td class="placeholder score-highlight">{{impulsivity_percentile}}</td>
+                    <td class="placeholder">{{impulsivity_class}}</td>
+                </tr>
+                <tr>
+                    <td>Hyperactivity</td>
+                    <td class="placeholder">{{hyperactivity_raw}}</td>
+                    <td class="placeholder">{{hyperactivity_scaled}}</td>
+                    <td class="placeholder score-highlight">{{hyperactivity_percentile}}</td>
+                    <td class="placeholder">{{hyperactivity_class}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- AI Analysis Section -->
+<div class="section">
+    <h2 class="section-title">2. AI-Assisted Cognitive Profile (Nitzutz)</h2>
+    <div class="ai-analysis-badge">&#9889; Generated by Nitzutz AI Engine</div>
+    <div class="section-content">
+        <p class="placeholder">{{ai_cognitive_profile}}</p>
+    </div>
+    <div class="clinical-note">
+        <strong>Clinical Interpretation:</strong>
+        <span class="placeholder">{{clinical_interpretation}}</span>
+    </div>
+</div>
+
+<!-- Behavioural Observations -->
+<div class="section">
+    <h2 class="section-title">3. Behavioural Observations</h2>
+    <div class="section-content">
+        <p class="placeholder">{{behavioural_observations}}</p>
+    </div>
+</div>
+
+<!-- Recommendations -->
+<div class="section">
+    <h2 class="section-title">4. Recommendations</h2>
+    <div class="section-content">
+        <p class="placeholder">{{recommendations}}</p>
+    </div>
+</div>
+
+<!-- Clinician Signature -->
+<div class="section">
+    <h2 class="section-title">5. Clinician Attestation</h2>
+    <div class="section-content">
+        <p>
+            This report was prepared by
+            <strong class="placeholder">{{clinician_name}}</strong>,
+            <span class="placeholder">{{clinician_title}}</span>,
+            based on MOXO assessment data, AI-assisted analysis, and clinical judgement.
+        </p>
+        <br>
+        <p>Signature: ____________________________</p>
+        <p>Date: <span class="placeholder">{{report_date}}</span></p>
+        <p>Licence: <span class="placeholder">{{clinician_licence}}</span></p>
+    </div>
+</div>
+
+<!-- Footer -->
+<div class="report-footer">
+    <p class="confidential">Confidential — For Authorised Recipients Only</p>
+    <p>RoTEM Academy &bull; London, UK &amp; Tel Aviv, Israel &bull; info@rotem-academy.com</p>
+    <p>This report is generated using the RoTEM assessment platform. AI analysis is provided as a clinical aid and does not replace professional judgement.</p>
+    <p>&copy; 2026 RoTEM Academy. All rights reserved.</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoTEM Academy | The Future of ADHD Assessment &amp; Clinical Training</title>
+    <meta name="description" content="Remote MOXO ADHD assessments powered by AI analysis. Professional clinical training for ADHD specialists. Internationally certified.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/landing_en.css">
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="navbar" id="navbar">
+    <div class="nav-container">
+        <a href="/" class="nav-logo">
+            <img src="/static/img/rotem-logo.svg" alt="RoTEM Academy" class="logo-img">
+            <span class="logo-text">RoTEM<span class="logo-accent">Academy</span></span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#pulse">Pulse Check</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#method">Our Method</a></li>
+            <li><a href="#training">Training</a></li>
+            <li><a href="#credentials">Credentials</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+        <div class="nav-actions">
+            <a href="?lang=he" class="lang-switch" title="עברית">HE</a>
+            <a href="#contact" class="btn btn-primary btn-sm">Book Assessment</a>
+        </div>
+        <button class="nav-toggle" aria-label="Toggle navigation">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<header class="hero" id="hero">
+    <div class="hero-bg">
+        <div class="hero-particles" id="particles"></div>
+    </div>
+    <div class="hero-content">
+        <div class="hero-badge">Internationally Certified ADHD Assessment Centre</div>
+        <h1 class="hero-title">
+            The Future of <span class="text-gradient">ADHD Assessment</span>
+            &amp; Clinical Training
+        </h1>
+        <p class="hero-subtitle">
+            Combining remote MOXO assessments with AI-powered analysis and emotional
+            support &mdash; delivering precise, compassionate ADHD evaluations from anywhere.
+        </p>
+        <div class="hero-cta">
+            <a href="#contact" class="btn btn-primary btn-lg">
+                Book a Remote MOXO Assessment
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a href="#training" class="btn btn-outline btn-lg">
+                Join the Next Training Cohort
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat">
+                <span class="stat-number">500+</span>
+                <span class="stat-label">Assessments Completed</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">98%</span>
+                <span class="stat-label">Diagnostic Accuracy</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number">12</span>
+                <span class="stat-label">Countries Served</span>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Pulse Check Section -->
+<section class="section section-pulse" id="pulse">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag section-tag-light">Live Demo</span>
+            <h2 class="section-title section-title-light">Experience Your Neural Signature</h2>
+            <p class="section-desc section-desc-light">
+                See how RoTEM reads cognitive patterns in real time.
+                Move your mouse or type &mdash; watch your signature form.
+            </p>
+        </div>
+        <div class="pulse-widget" id="pulseWidget">
+            <!-- Waveform canvas -->
+            <div class="pulse-canvas-wrap">
+                <canvas id="pulseCanvas" width="720" height="200"></canvas>
+            </div>
+            <!-- AI Insight bubble -->
+            <div class="pulse-insight" id="pulseInsight">
+                <div class="pulse-insight-avatar">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <p class="pulse-insight-text" id="pulseInsightText">
+                    Press <strong>Start Pulse Scan</strong> to begin&hellip;
+                </p>
+            </div>
+            <!-- Controls -->
+            <div class="pulse-controls">
+                <button class="btn btn-primary btn-lg" id="pulseStartBtn">
+                    Start Pulse Scan
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </button>
+            </div>
+            <!-- Lead gate (hidden until scan completes) -->
+            <div class="pulse-lead-gate" id="pulseLeadGate" style="display:none;">
+                <p>Enter your email to receive your full Neural Signature report:</p>
+                <form class="pulse-lead-form" id="pulseLeadForm">
+                    <input type="email" id="pulseEmail" name="email" required placeholder="you@clinic.co.uk">
+                    <button type="submit" class="btn btn-primary">Get My Report</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section class="section" id="about">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag">About RoTEM</span>
+            <h2 class="section-title">A New Standard in ADHD Care</h2>
+            <p class="section-desc">
+                RoTEM Academy integrates cutting-edge technology with clinical expertise
+                to transform how ADHD is assessed, understood, and managed.
+            </p>
+        </div>
+        <div class="about-grid">
+            <div class="about-card">
+                <div class="about-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <h3>Remote MOXO Assessments</h3>
+                <p>
+                    Clinically validated continuous performance tests administered remotely,
+                    providing objective ADHD metrics from the comfort of home.
+                </p>
+            </div>
+            <div class="about-card">
+                <div class="about-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <h3>AI-Powered Analysis (Nitzutz)</h3>
+                <p>
+                    Our proprietary AI engine analyses assessment data with clinical precision,
+                    generating detailed cognitive profiles and actionable insights.
+                </p>
+            </div>
+            <div class="about-card">
+                <div class="about-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                <h3>Emotional Support (Claudia)</h3>
+                <p>
+                    Every assessment is wrapped in a caring, empathetic experience. Claudia,
+                    our AI companion, guides clients through the process with warmth and clarity.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Services Section -->
+<section class="section section-alt" id="services">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag">Services</span>
+            <h2 class="section-title">What We Offer</h2>
+        </div>
+        <div class="services-grid">
+            <div class="service-card service-featured">
+                <div class="service-badge">Most Popular</div>
+                <h3>Remote MOXO Assessment</h3>
+                <div class="service-price">
+                    <span class="price-amount">&euro;200</span>
+                    <span class="price-period">per assessment</span>
+                </div>
+                <ul class="service-features">
+                    <li>Full MOXO continuous performance test</li>
+                    <li>AI-enhanced cognitive profile analysis</li>
+                    <li>Comprehensive PDF report</li>
+                    <li>30-minute clinical feedback session</li>
+                    <li>Emotional support throughout the process</li>
+                    <li>Results within 48 hours</li>
+                </ul>
+                <a href="#contact" class="btn btn-primary btn-block">Book Now</a>
+            </div>
+            <div class="service-card">
+                <h3>Clinical Training Programme</h3>
+                <div class="service-price">
+                    <span class="price-amount">Contact Us</span>
+                    <span class="price-period">for cohort pricing</span>
+                </div>
+                <ul class="service-features">
+                    <li>Certified MOXO administration training</li>
+                    <li>AI-assisted report interpretation</li>
+                    <li>Clinical supervision hours</li>
+                    <li>Access to the RoTEM platform</li>
+                    <li>Ongoing professional development</li>
+                    <li>International certification</li>
+                </ul>
+                <a href="#training" class="btn btn-outline btn-block">Learn More</a>
+            </div>
+            <div class="service-card">
+                <h3>Institutional Partnership</h3>
+                <div class="service-price">
+                    <span class="price-amount">Custom</span>
+                    <span class="price-period">tailored solutions</span>
+                </div>
+                <ul class="service-features">
+                    <li>White-label assessment platform</li>
+                    <li>Bulk assessment packages</li>
+                    <li>Custom reporting templates</li>
+                    <li>Staff training &amp; onboarding</li>
+                    <li>Dedicated account manager</li>
+                    <li>API integration support</li>
+                </ul>
+                <a href="#contact" class="btn btn-outline btn-block">Get in Touch</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Method Section -->
+<section class="section" id="method">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag">Our Method</span>
+            <h2 class="section-title">How It Works</h2>
+            <p class="section-desc">
+                A seamless four-step process from booking to results.
+            </p>
+        </div>
+        <div class="method-steps">
+            <div class="method-step">
+                <div class="step-number">01</div>
+                <h3>Book &amp; Prepare</h3>
+                <p>Schedule your assessment online. Receive preparation guidelines and meet Claudia, your AI companion for the journey.</p>
+            </div>
+            <div class="method-step">
+                <div class="step-number">02</div>
+                <h3>Remote Assessment</h3>
+                <p>Complete the MOXO test from home via our secure platform. A clinician monitors the session in real time.</p>
+            </div>
+            <div class="method-step">
+                <div class="step-number">03</div>
+                <h3>AI Analysis</h3>
+                <p>Nitzutz processes your results through multiple clinical models, generating a comprehensive cognitive profile.</p>
+            </div>
+            <div class="method-step">
+                <div class="step-number">04</div>
+                <h3>Report &amp; Feedback</h3>
+                <p>Receive a detailed PDF report and a personal feedback session with a certified clinician.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Training Section -->
+<section class="section section-alt" id="training">
+    <div class="container">
+        <div class="training-layout">
+            <div class="training-content">
+                <span class="section-tag">Professional Training</span>
+                <h2 class="section-title">Join the Next Training Cohort</h2>
+                <p>
+                    Become a certified RoTEM practitioner. Our training programme equips
+                    clinicians with the skills to administer, interpret, and report MOXO
+                    assessments using AI-assisted tools.
+                </p>
+                <ul class="training-highlights">
+                    <li>
+                        <strong>Duration:</strong> 8-week blended programme (online + supervised practice)
+                    </li>
+                    <li>
+                        <strong>Certification:</strong> RoTEM Certified ADHD Assessment Practitioner
+                    </li>
+                    <li>
+                        <strong>Prerequisites:</strong> Licensed clinician (psychologist, psychiatrist, or equivalent)
+                    </li>
+                    <li>
+                        <strong>Next Cohort:</strong> Applications open &mdash; limited places available
+                    </li>
+                </ul>
+                <a href="#contact" class="btn btn-primary btn-lg">Apply for Training</a>
+            </div>
+            <div class="training-visual">
+                <div class="training-card-stack">
+                    <div class="t-card t-card-1">
+                        <div class="t-card-icon">&#127891;</div>
+                        <span>Certified Programme</span>
+                    </div>
+                    <div class="t-card t-card-2">
+                        <div class="t-card-icon">&#129302;</div>
+                        <span>AI-Assisted Tools</span>
+                    </div>
+                    <div class="t-card t-card-3">
+                        <div class="t-card-icon">&#127758;</div>
+                        <span>International Standards</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Credentials Section -->
+<section class="section" id="credentials">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-tag">Credentials &amp; Accreditation</span>
+            <h2 class="section-title">Trusted by Institutions Worldwide</h2>
+        </div>
+        <div class="credentials-grid">
+            <div class="credential-card">
+                <div class="credential-logo">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h4>Israeli Ministry of Health</h4>
+                <p>Recognised assessment methodology under Israeli clinical practice standards.</p>
+            </div>
+            <div class="credential-card">
+                <div class="credential-logo">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <h4>MOXO International Standards</h4>
+                <p>Certified MOXO test administration centre meeting global CPT benchmarks.</p>
+            </div>
+            <div class="credential-card">
+                <div class="credential-logo">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <h4>Clinical Data Security</h4>
+                <p>GDPR-compliant data handling. All assessments encrypted end-to-end.</p>
+            </div>
+            <div class="credential-card">
+                <div class="credential-logo">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h4>Professional Network</h4>
+                <p>Active partnerships with clinics and universities across 12 countries.</p>
+            </div>
+        </div>
+        <!-- Placeholder for certificate images -->
+        <div class="cert-logos" id="cert-logos">
+            <!-- Certification logos and badges will be placed here -->
+        </div>
+    </div>
+</section>
+
+<!-- Contact / CTA Section -->
+<section class="section section-dark" id="contact">
+    <div class="container">
+        <div class="contact-layout">
+            <div class="contact-info">
+                <span class="section-tag section-tag-light">Get Started</span>
+                <h2 class="section-title section-title-light">Book Your Assessment Today</h2>
+                <p class="contact-desc">
+                    Whether you're seeking an ADHD assessment or looking to join our training
+                    programme, we're here to help. Reach out and a member of our team will
+                    respond within 24 hours.
+                </p>
+                <div class="contact-details">
+                    <div class="contact-item">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <a href="mailto:info@rotem-academy.com">info@rotem-academy.com</a>
+                    </div>
+                    <div class="contact-item">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>London, United Kingdom &amp; Tel Aviv, Israel</span>
+                    </div>
+                </div>
+            </div>
+            <div class="contact-form-wrap">
+                <form class="contact-form" id="contactForm" action="/api/contact" method="POST">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" name="name" required placeholder="Dr. Jane Smith">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required placeholder="jane@clinic.co.uk">
+                    </div>
+                    <div class="form-group">
+                        <label for="interest">I'm Interested In</label>
+                        <select id="interest" name="interest" required>
+                            <option value="" disabled selected>Select an option</option>
+                            <option value="assessment">Remote MOXO Assessment</option>
+                            <option value="training">Clinical Training Programme</option>
+                            <option value="partnership">Institutional Partnership</option>
+                            <option value="other">Other Enquiry</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="4" placeholder="Tell us about your needs..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block btn-lg">
+                        Send Enquiry
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <span class="logo-text">RoTEM<span class="logo-accent">Academy</span></span>
+                <p>Transforming ADHD assessment through technology, compassion, and clinical excellence.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#training">Training</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="/privacy">Privacy Policy</a></li>
+                    <li><a href="/terms">Terms of Service</a></li>
+                    <li><a href="/gdpr">GDPR Compliance</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 RoTEM Academy. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
+
+<script src="/static/js/landing_en.js"></script>
+</body>
+</html>
